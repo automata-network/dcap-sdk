@@ -1,10 +1,12 @@
 {
     "name": "@dcap-sdk/dcap-portal",
     "version": "0.1.0",
-    "scripts": {
-
-    },
+    "scripts": {},
     "dependencies": {
-        
+        "@openzeppelin/contracts": "5.1.0",
+        "@openzeppelin/contracts-upgradeable": "5.1.0",
+        "automata-dcap-attestation": "https://github.com/automata-network/automata-dcap-attestation",
+        "automata-on-chain-pccs": "https://github.com/automata-network/automata-on-chain-pccs",
+        "forge-std": "github:foundry-rs/forge-std#v1.9.4"
     }
 }
