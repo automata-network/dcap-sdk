@@ -48,10 +48,6 @@ func TestDcapPortal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	opts, err := portal.BuildTransactOpts(ctx, privateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	counter, err := VerifiedCounter.NewVerifiedCounterCaller(verifiedCounterAddr, portal.Client())
 	if err != nil {
@@ -65,6 +61,10 @@ func TestDcapPortal(t *testing.T) {
 	// deposit 10 wei to increase the counter, check the logic from ../dcap-portal/src/examples/VerifiedCounter.sol
 	callback := NewCallbackFromAbiJSON(VerifiedCounter.VerifiedCounterABI).WithParams("deposit").WithTo(verifiedCounterAddr).WithValue(big.NewInt(10))
 
+	opts, err := portal.BuildTransactOpts(ctx, privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tx, err := portal.VerifyOnChain(opts, mock.Quotes[0], callback)
 	if err != nil {
 		logex.Error(err)

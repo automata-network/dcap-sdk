@@ -51,7 +51,7 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
 
 ## Verify with ZkProof (Risc0 and Succinct)
 ```go
-func VerifyOnRisc0(ctx context.Context, quote []byte, privateKeyStr string) error {
+func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
     privateKey, err := crypto.HexToECDSA(privateKeyStr)
     if err != nil {
         return err
