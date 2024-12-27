@@ -9,9 +9,9 @@ Go SDK for interactive with [Automata DCAP attestation](http://github.com/automa
 ```go
 func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) error {
     privateKey, err := crypto.HexToECDSA(privateKeyStr)
-	if err != nil {
+    if err != nil {
         return err
-	}
+    }
 
     portal, err := godcap.NewDcapPortal(ctx, RPC_URL)
     if err != nil {
@@ -25,18 +25,17 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
         .WithTo(verifiedCounterAddr)
 
     opts, err := portal.BuildTransactOpts(ctx, privateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+    if err != nil {
+        return err
+    }
 
     tx, err := portal.VerifyOnChain(opts, quote, callback)
-	if err != nil {
-		logex.Error(err)
-		t.Fatal(err)
-	}
+    if err != nil {
+        return err
+    }
 
     // waiting 
-	receipt := <-portal.WaitTx(ctx, tx)
+    receipt := <-portal.WaitTx(ctx, tx)
     fmt.Printf("%#v\n", receipt)
 }
 ```
@@ -45,9 +44,9 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
 ```go
 func VerifyOnRisc0(ctx context.Context, quote []byte, privateKeyStr string) error {
     privateKey, err := crypto.HexToECDSA(privateKeyStr)
-	if err != nil {
+    if err != nil {
         return err
-	}
+    }
 
     portal, err := godcap.NewDcapPortal(ctx, RPC_URL)
     if err != nil {
@@ -77,18 +76,17 @@ func VerifyOnRisc0(ctx context.Context, quote []byte, privateKeyStr string) erro
         .WithTo(verifiedCounterAddr)
 
     opts, err := portal.BuildTransactOpts(ctx, privateKey)
-	if err != nil {
+    if err != nil {
         return err
-	}
+    }
 
     tx, err := portal.VerifyAndAttestWithZKProof(opts, zkproof, callback)
-	if err != nil {
-		logex.Error(err)
-		t.Fatal(err)
-	}
+    if err != nil {
+        return err
+    }
 
     // waiting 
-	receipt := <-portal.WaitTx(ctx, tx)
+    receipt := <-portal.WaitTx(ctx, tx)
     fmt.Printf("%#v\n", receipt)
 }
 ```
