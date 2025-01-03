@@ -191,7 +191,7 @@ func NewDcapPortal(ctx context.Context, options ...DcapPortalOption) (*DcapPorta
 	}
 	portal.dcapAbi = dcapAbi
 
-	pccs, err := pccs.NewServer(portal.client, portal.chain.PCCS)
+	pccs, err := pccs.NewClient(portal.client, portal.chain.PCCS)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}

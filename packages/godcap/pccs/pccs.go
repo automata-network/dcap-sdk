@@ -45,8 +45,8 @@ type Client struct {
 	enclaveId *AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao
 }
 
-// NewServer initializes a new Server instance
-func NewServer(client *ethclient.Client, chain *ChainConfig) (*Client, error) {
+// NewClient initializes a new Server instance
+func NewClient(client *ethclient.Client, chain *ChainConfig) (*Client, error) {
 	// Initialize AutomataPcsDao contract
 	pcs, err := AutomataPcsDao.NewAutomataPcsDao(chain.AutomataPcsDao, client)
 	if err != nil {
