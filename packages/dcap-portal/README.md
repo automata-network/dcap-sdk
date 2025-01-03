@@ -16,3 +16,21 @@ The DCAP portal is used to provide an entry point for [Automata DCAP attestation
 * forge
 * pnpm / npm
 
+```mermaid
+sequenceDiagram
+  autonumber
+    participant U as User
+    participant P as Portal
+    participant A as DCAP Attestation
+    participant C as User Contract
+    
+note over U: Generate attestation report
+U->>+P: Send Attestation Report
+P->>A: Verify Attestation Report
+alt Verification Passed
+	P->>C: Callback
+	P->>U: Done
+else
+	P->>-U: error VERIFICATION_FAILED()
+end
+```
