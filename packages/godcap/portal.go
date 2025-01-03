@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -39,49 +40,144 @@ var (
 	}
 )
 
+type DcapPortalOption func(context.Context, *DcapPortal) error
+
+// Connect to the portal with the provided endpoint
+func WithEndpoint(endpoint string) DcapPortalOption {
+	return func(ctx context.Context, p *DcapPortal) error {
+		if p.client != nil {
+			return logex.NewErrorf("client already set")
+		}
+
+		client, err := ethclient.Dial(endpoint)
+		if err != nil {
+			return logex.Trace(err)
+		}
+
+		return WithClient(client)(ctx, p)
+	}
+}
+
+// Connect to the portal with the provided client
+func WithClient(client *ethclient.Client) DcapPortalOption {
+	return func(ctx context.Context, p *DcapPortal) error {
+		if p.client != nil {
+			return logex.NewErrorf("client already set")
+		}
+
+		chainId, err := client.ChainID(ctx)
+		if err != nil {
+			return logex.Trace(err)
+		}
+
+		p.chainID = chainId.Int64()
+		p.client = client
+		if p.chain == nil {
+			chainConfig := ChainConfigFromChainId(p.chainID)
+			if chainConfig == nil {
+				return logex.NewErrorf("chain config is not found for chain id %v", p.chainID)
+			}
+			WithChainConfig(chainConfig)(ctx, p)
+		}
+		return nil
+	}
+}
+
+// Custom chain config
+func WithChainConfig(chainConfig *ChainConfig) DcapPortalOption {
+	return func(ctx context.Context, p *DcapPortal) error {
+		if p.chain != nil {
+			return logex.NewErrorf("chain config already set")
+		}
+
+		p.chain = chainConfig
+		return nil
+	}
+}
+
+func WithPrivateKey(key string) DcapPortalOption {
+	return func(ctx context.Context, p *DcapPortal) error {
+		privateKey, err := crypto.HexToECDSA(key)
+		if err != nil {
+			return logex.Trace(err)
+		}
+		p.privateKey = privateKey
+		return nil
+	}
+}
+
+// Enable zero-knowledge proof functionality
+// cfg can be nil
+func WithZkProof(cfg *zkdcap.ZkProofConfig) DcapPortalOption {
+	return func(ctx context.Context, p *DcapPortal) error {
+		if cfg == nil {
+			cfg = new(zkdcap.ZkProofConfig)
+		}
+		p.zkConfig = cfg
+		return nil
+	}
+}
+
+// DcapPortal represents the main interface for interacting with DCAP attestation
 type DcapPortal struct {
-	client  *ethclient.Client
+	client     *ethclient.Client
+	chainID    int64
+	zkConfig   *zkdcap.ZkProofConfig
+	chain      *ChainConfig
+	privateKey *ecdsa.PrivateKey
+
 	Stub    *gen.DcapPortal
 	abi     abi.ABI
 	dcapAbi abi.ABI
-	chain   *ChainConfig
-	pccs    *pccs.Server
+	pccs    *pccs.Client
 
 	zkProof *zkdcap.ZkProofClient
 }
 
-func NewDcapPortal(ctx context.Context, endpoint string) (*DcapPortal, error) {
-	client, err := ethclient.Dial(endpoint)
-	if err != nil {
-		return nil, logex.Trace(err)
+// NewDcapPortal creates a new instance of DcapPortal with the provided options.
+// It will connect to AutomataTestnet(https://explorer-testnet.ata.network) by default
+func NewDcapPortal(ctx context.Context, options ...DcapPortalOption) (*DcapPortal, error) {
+	var portal DcapPortal
+	for _, option := range options {
+		if err := option(ctx, &portal); err != nil {
+			return nil, logex.Trace(err)
+		}
+	}
+	if portal.chain == nil {
+		if err := WithChainConfig(ChainAutomataTestnet)(ctx, &portal); err != nil {
+			return nil, logex.Trace(err)
+		}
 	}
 
-	chainId, err := client.ChainID(ctx)
-	if err != nil {
-		return nil, logex.Trace(err)
+	// try to connect to the default endpoint if client is not set
+	if portal.client == nil {
+		endpoint := portal.chain.Endpoint
+		if endpoint == "" {
+			endpoint = portal.chain.OneRpc
+		}
+		if endpoint != "" {
+			if err := WithEndpoint(endpoint)(ctx, &portal); err != nil {
+				return nil, logex.Trace(err, "defaultEndpoint", portal.chain.Endpoint)
+			}
+		}
 	}
-	chain := ChainConfigFromChainId(chainId.Int64())
-	if chain == nil {
-		return nil, logex.Trace(err)
+	if portal.client == nil {
+		return nil, logex.NewError("client is not set")
 	}
-	return NewDcapPortalFromConfig(ctx, client, chain)
-}
 
-func NewDcapPortalFromConfig(ctx context.Context, client *ethclient.Client, chain *ChainConfig) (*DcapPortal, error) {
-	stub, err := gen.NewDcapPortal(chain.DcapPortal, client)
+	stub, err := gen.NewDcapPortal(portal.chain.DcapPortal, portal.client)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+	portal.Stub = stub
 
 	portalAbi, err := abi.JSON(strings.NewReader(gen.DcapPortalABI))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+	portal.abi = portalAbi
+
 	libAbi, err := abi.JSON(strings.NewReader(DcapLibCallback.DcapLibCallbackABI))
-	if err != nil {
-		return nil, logex.Trace(err)
-	}
-	dcapAbi, err := abi.JSON(strings.NewReader(IDcapAttestation.IDcapAttestationABI))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -89,37 +185,40 @@ func NewDcapPortalFromConfig(ctx context.Context, client *ethclient.Client, chai
 		portalAbi.Errors[name] = err
 	}
 
-	pccs, err := pccs.NewServer(client, chain.PCCS)
+	dcapAbi, err := abi.JSON(strings.NewReader(IDcapAttestation.IDcapAttestationABI))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+	portal.dcapAbi = dcapAbi
 
-	portal := &DcapPortal{
-		chain:   chain,
-		client:  client,
-		abi:     portalAbi,
-		dcapAbi: dcapAbi,
-		pccs:    pccs,
-		Stub:    stub,
+	pccs, err := pccs.NewServer(portal.client, portal.chain.PCCS)
+	if err != nil {
+		return nil, logex.Trace(err)
 	}
-	return portal, nil
+	portal.pccs = pccs
+
+	zkProofClient, err := zkdcap.NewZkProofClient(portal.zkConfig, pccs)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	portal.zkProof = zkProofClient
+
+	return &portal, nil
 }
 
-func (d *DcapPortal) Pccs() *pccs.Server {
+// Pccs returns the PCCS server instance associated with the DcapPortal.
+func (d *DcapPortal) Pccs() *pccs.Client {
 	return d.pccs
 }
 
-func (d *DcapPortal) EnableZkProof(cfg *zkdcap.ZkProofConfig) error {
-	client, err := zkdcap.NewZkProofClient(cfg, d.pccs)
-	if err != nil {
-		return logex.Trace(err)
+// BuildTransactOpts builds transaction options using the provided private key.
+// Returns error if key transactor creation or options normalization fails.
+func (p *DcapPortal) BuildTransactOpts(ctx context.Context) (*bind.TransactOpts, error) {
+	if p.privateKey == nil {
+		return nil, logex.NewError("private key is not set(WithPrivateKey)")
 	}
-	d.zkProof = client
-	return nil
-}
 
-func (p *DcapPortal) BuildTransactOpts(ctx context.Context, key *ecdsa.PrivateKey) (*bind.TransactOpts, error) {
-	opts, err := bind.NewKeyedTransactorWithChainID(key, big.NewInt(p.chain.ChainId))
+	opts, err := bind.NewKeyedTransactorWithChainID(p.privateKey, big.NewInt(p.chain.ChainId))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -127,6 +226,7 @@ func (p *DcapPortal) BuildTransactOpts(ctx context.Context, key *ecdsa.PrivateKe
 	return p.normalizeOpts(opts)
 }
 
+// WaitTx waits for the transaction receipt and returns it through a channel.
 func (p *DcapPortal) WaitTx(ctx context.Context, tx *types.Transaction) <-chan *types.Receipt {
 	result := make(chan *types.Receipt)
 	go func() {
@@ -144,6 +244,9 @@ func (p *DcapPortal) WaitTx(ctx context.Context, tx *types.Transaction) <-chan *
 				}
 
 				logex.Infof("tx receipt %v comfirmed on %v", tx.Hash(), receipt.BlockNumber)
+				if p.chain.Explorer != "" {
+					logex.Infof("explorer: %v/tx/%v", p.chain.Explorer, tx.Hash())
+				}
 				result <- receipt
 				return
 			}
@@ -153,7 +256,17 @@ func (p *DcapPortal) WaitTx(ctx context.Context, tx *types.Transaction) <-chan *
 	return result
 }
 
-func (p *DcapPortal) VerifyOnChain(opts *bind.TransactOpts, rawQuote []byte, callback *Callback) (*types.Transaction, error) {
+// VerifyOnChain submits quote for on-chain verification with callback.
+// Returns transaction hash and error if submission fails.
+func (p *DcapPortal) VerifyAndAttestOnChain(opts *bind.TransactOpts, rawQuote []byte, callback *Callback) (*types.Transaction, error) {
+	var err error
+	if opts == nil {
+		opts, err = p.BuildTransactOpts(context.Background())
+		if err != nil {
+			return nil, logex.Trace(err)
+		}
+	}
+
 	params, err := callback.Abi()
 	if err != nil {
 		return nil, logex.Trace(err)
@@ -162,26 +275,26 @@ func (p *DcapPortal) VerifyOnChain(opts *bind.TransactOpts, rawQuote []byte, cal
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	balance, err := p.client.BalanceAt(opts.Context, opts.From, nil)
+	feeBase, err := p.EstimateFeeBaseVerifyOnChain(opts.Context, rawQuote)
 	if err != nil {
-		return nil, logex.Trace(err)
-	}
-	feeBase, err := p.EstimateFeeBaseVerifyOnChain(opts.Context, opts.From, balance, rawQuote)
-	if err != nil {
-		return nil, logex.Trace(err)
+		return nil, logex.Trace(p.decodeErr(err))
 	}
 	opts.Value = new(big.Int).Add(p.attestationFee(opts, feeBase), params.Value)
 
-	newTx, err := p.Stub.VerifyOnChain(opts, rawQuote, params)
+	newTx, err := p.Stub.VerifyAndAttestOnChain(opts, rawQuote, params)
 	if err != nil {
 		return nil, logex.Trace(p.decodeErr(err))
 	}
 	return newTx, nil
 }
 
+// GenerateZkProof generates zero-knowledge proof for the given quote.
+// Returns error if zkproof client is not initialized or proof generation fails.
+//
+// Note: EnableZkProof() should be called before using this function.
 func (p *DcapPortal) GenerateZkProof(ctx context.Context, ty zkdcap.ZkType, quote []byte) (*zkdcap.ZkProof, error) {
 	if p.zkProof == nil {
-		return nil, logex.NewErrorf("DcapPortal not withZkProofClient")
+		return nil, logex.NewErrorf("DcapPortal should call EnableZkProof() frist")
 	}
 	parser := parser.NewQuoteParser(quote)
 	collateral, err := zkdcap.NewCollateralFromQuoteParser(ctx, parser, p.pccs)
@@ -191,7 +304,17 @@ func (p *DcapPortal) GenerateZkProof(ctx context.Context, ty zkdcap.ZkType, quot
 	return p.zkProof.ProveQuote(ctx, ty, quote, collateral)
 }
 
+// VerifyAndAttestWithZKProof verifies and attests the ZK proof on chain.
+// Returns transaction hash and error if verification fails.
 func (p *DcapPortal) VerifyAndAttestWithZKProof(opts *bind.TransactOpts, zkProof *zkdcap.ZkProof, callback *Callback) (*types.Transaction, error) {
+	var err error
+	if opts == nil {
+		opts, err = p.BuildTransactOpts(context.Background())
+		if err != nil {
+			return nil, logex.Trace(err)
+		}
+	}
+
 	params, err := callback.Abi()
 	if err != nil {
 		return nil, logex.Trace(err)
@@ -200,13 +323,9 @@ func (p *DcapPortal) VerifyAndAttestWithZKProof(opts *bind.TransactOpts, zkProof
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	balance, err := p.client.BalanceAt(opts.Context, opts.From, nil)
+	feeBase, err := p.EstimateFeeBaseVerifyAndAttestWithZKProof(opts.Context, zkProof)
 	if err != nil {
-		return nil, logex.Trace(err)
-	}
-	feeBase, err := p.EstimateFeeBaseVerifyAndAttestWithZKProof(opts.Context, opts.From, balance, zkProof)
-	if err != nil {
-		return nil, logex.Trace(err)
+		return nil, logex.Trace(p.decodeErr(err))
 	}
 	opts.Value = new(big.Int).Add(p.attestationFee(opts, feeBase), params.Value)
 
@@ -217,78 +336,52 @@ func (p *DcapPortal) VerifyAndAttestWithZKProof(opts *bind.TransactOpts, zkProof
 	return newTx, nil
 }
 
-// Note: the fee = EstimateFeeBase * GasPrice
-func (p *DcapPortal) EstimateFeeBaseVerifyOnChain(ctx context.Context, from common.Address, value *big.Int, rawQuote []byte) (*big.Int, error) {
-	result, err := p.callContract(ctx, from, value, "estimateFeeBaseVerifyOnChain", rawQuote)
+// EstimateFeeBaseVerifyOnChain estimates the base fee for quote verification.
+// The actual fee will be base fee multiplied by gas price.
+func (p *DcapPortal) EstimateFeeBaseVerifyOnChain(ctx context.Context, rawQuote []byte) (*big.Int, error) {
+	result, err := p.callContract(ctx, &p.abi, "estimateBaseFeeVerifyOnChain", rawQuote)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
 	return result[0].(*big.Int), nil
 }
 
-// Note: the fee = EstimateFeeBase * GasPrice
-func (p *DcapPortal) EstimateFeeBaseVerifyAndAttestWithZKProof(ctx context.Context, from common.Address, value *big.Int, zkProof *zkdcap.ZkProof) (*big.Int, error) {
-	result, err := p.callContract(ctx, from, value, "estimateFeeBaseVerifyAndAttestWithZKProof", zkProof.Output, uint8(zkProof.Type), zkProof.Proof)
+// EstimateFeeBaseVerifyAndAttestWithZKProof estimates the base fee for ZK proof verification and attestation.
+// The actual fee will be base fee multiplied by gas price.
+func (p *DcapPortal) EstimateFeeBaseVerifyAndAttestWithZKProof(ctx context.Context, zkProof *zkdcap.ZkProof) (*big.Int, error) {
+	result, err := p.callContract(ctx, &p.abi, "estimateBaseFeeVerifyAndAttestWithZKProof", zkProof.Output, uint8(zkProof.Type), zkProof.Proof)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
 	return result[0].(*big.Int), nil
 }
 
-func (p *DcapPortal) CheckQuote(ctx context.Context, from common.Address, quote []byte) (bool, error) {
-	calldata, err := p.dcapAbi.Pack("verifyOnChain", quote)
-	if err != nil {
-		return false, logex.Trace(err)
-	}
-	balance, err := p.client.BalanceAt(ctx, from, nil)
-	if err != nil {
-		return false, logex.Trace(err)
-	}
-	ret, err := p.client.CallContract(ctx, ethereum.CallMsg{
-		To:    &p.chain.AutomataDcapAttestationFee,
-		From:  from,
-		Data:  calldata,
-		Value: balance,
-	}, nil)
-	if err != nil {
-		return false, logex.Trace(err)
-	}
-	args, err := p.dcapAbi.Unpack("verifyOnChain", ret)
+// CheckQuote verifies if a quote is valid by doing a simulated call.
+// Returns true if quote is valid, false otherwise.
+func (p *DcapPortal) CheckQuote(ctx context.Context, quote []byte) (bool, error) {
+	args, err := p.callContract(ctx, &p.dcapAbi, "verifyAndAttestOnChain", quote)
 	if err != nil {
 		return false, logex.Trace(err)
 	}
 	return args[0].(bool), nil
 }
 
-func (p *DcapPortal) CheckZkProof(ctx context.Context, from common.Address, proof *zkdcap.ZkProof) (bool, error) {
-	calldata, err := p.dcapAbi.Pack("verifyAndAttestWithZKProof", proof.Output, proof.Type, proof.Proof)
-	if err != nil {
-		return false, logex.Trace(err)
-	}
-	balance, err := p.client.BalanceAt(ctx, from, nil)
-	if err != nil {
-		return false, logex.Trace(err)
-	}
-	ret, err := p.client.CallContract(ctx, ethereum.CallMsg{
-		To:    &p.chain.AutomataDcapAttestationFee,
-		From:  from,
-		Data:  calldata,
-		Value: balance,
-	}, nil)
-	if err != nil {
-		return false, logex.Trace(err)
-	}
-	args, err := p.dcapAbi.Unpack("verifyAndAttestWithZKProof", ret)
+// CheckZkProof verifies if a ZK proof is valid by doing a simulated call.
+// Returns true if proof is valid, false otherwise.
+func (p *DcapPortal) CheckZkProof(ctx context.Context, proof *zkdcap.ZkProof) (bool, error) {
+	args, err := p.callContract(ctx, &p.dcapAbi, "verifyAndAttestWithZKProof", proof.Output, proof.Type, proof.Proof)
 	if err != nil {
 		return false, logex.Trace(err)
 	}
 	return args[0].(bool), nil
 }
 
+// EstimateAttestationFee estimates the attestation fee for a transaction.
 func (p *DcapPortal) EstimateAttestationFee(tx *types.Transaction, callback *Callback) *big.Int {
 	return new(big.Int).Sub(tx.Value(), callback.Value())
 }
 
+// CalculateAttestationFee calculates the actual attestation fee based on the transaction receipt.
 func (p *DcapPortal) CalculateAttestationFee(tx *types.Transaction, callback *Callback, receipt *types.Receipt) *big.Int {
 	estimateFee := p.EstimateAttestationFee(tx, callback)
 	feeBase := new(big.Int).Div(estimateFee, tx.GasFeeCap())
@@ -296,6 +389,7 @@ func (p *DcapPortal) CalculateAttestationFee(tx *types.Transaction, callback *Ca
 	return fee
 }
 
+// PrintAttestationFee prints the attestation fee details for a transaction.
 func (p *DcapPortal) PrintAttestationFee(tx *types.Transaction, callback *Callback, receipt *types.Receipt) {
 	fmt.Println("Tx GasPrice:", tx.GasPrice())
 	fmt.Println("Callback Value:", callback.Value())
@@ -312,18 +406,38 @@ func (p *DcapPortal) PrintAttestationFee(tx *types.Transaction, callback *Callba
 	fmt.Println("Estimate Refund(under actual value):", refund)
 }
 
+// Client returns the Ethereum client associated with the DcapPortal.
 func (p *DcapPortal) Client() *ethclient.Client {
 	return p.client
 }
 
-func (p *DcapPortal) callContract(ctx context.Context, from common.Address, value *big.Int, method string, args ...interface{}) ([]interface{}, error) {
-	calldata, err := p.abi.Pack(method, args...)
+// callContract performs a contract call with the specified method and arguments
+// Returns the result of the call or an error if the call fails
+func (p *DcapPortal) callContract(ctx context.Context, abi *abi.ABI, method string, args ...interface{}) ([]interface{}, error) {
+	var from common.Address
+	if p.privateKey != nil {
+		from = crypto.PubkeyToAddress(p.privateKey.PublicKey)
+	}
+	value, err := p.client.BalanceAt(ctx, from, nil)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+
+	calldata, err := abi.Pack(method, args...)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	var to *common.Address
+	if abi == &p.abi {
+		to = &p.chain.DcapPortal
+	} else if abi == &p.dcapAbi {
+		to = &p.chain.AutomataDcapAttestationFee
+	} else {
+		return nil, logex.NewError("unknown abi")
+	}
 	msg := ethereum.CallMsg{
 		From:  from,
-		To:    &p.chain.DcapPortal,
+		To:    to,
 		Value: value,
 		Data:  calldata,
 	}
@@ -331,13 +445,15 @@ func (p *DcapPortal) callContract(ctx context.Context, from common.Address, valu
 	if err != nil {
 		return nil, logex.Trace(p.decodeErr(err))
 	}
-	result, err := p.abi.Unpack(method, data)
+	result, err := abi.Unpack(method, data)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
 	return result, nil
 }
 
+// decodeErrData decodes error data from a contract call
+// Returns a formatted error message
 func (p *DcapPortal) decodeErrData(msg string, dataBytes []byte) error {
 	sig := dataBytes
 	if len(sig) > 4 {
@@ -360,6 +476,8 @@ func (p *DcapPortal) decodeErrData(msg string, dataBytes []byte) error {
 	return logex.NewErrorf("%v: %v", msg, hexutil.Bytes(dataBytes))
 }
 
+// decodeErr decodes a JSON error from a contract call
+// Returns a formatted error message
 func (p *DcapPortal) decodeErr(err error) error {
 	if err == nil {
 		return nil
@@ -385,6 +503,7 @@ func (p *DcapPortal) decodeErr(err error) error {
 
 }
 
+// attestationFee calculates the attestation fee based on the transaction options and fee base
 func (p *DcapPortal) attestationFee(opts *bind.TransactOpts, feeBase *big.Int) *big.Int {
 	if p.chain.EIP1559 {
 		return new(big.Int).Mul(opts.GasFeeCap, feeBase)
@@ -393,6 +512,8 @@ func (p *DcapPortal) attestationFee(opts *bind.TransactOpts, feeBase *big.Int) *
 	}
 }
 
+// normalizeOpts normalizes the transaction options by setting default values
+// Handles both EIP1559 and legacy transaction types
 func (p *DcapPortal) normalizeOpts(optsRef *bind.TransactOpts) (*bind.TransactOpts, error) {
 	var opts bind.TransactOpts
 	if optsRef != nil {
@@ -445,6 +566,7 @@ func (p *DcapPortal) normalizeOpts(optsRef *bind.TransactOpts) (*bind.TransactOp
 	return &opts, nil
 }
 
+// JsonError represents a JSON error with code and data
 type JsonError interface {
 	Error() string
 	ErrorCode() int

@@ -1,0 +1,16 @@
+{
+    "name": "Ethereum Sepolia",
+    "chain_id": 11155111,
+    "testnet": true,
+    "one_rpc": "https://1rpc.io/sepolia",
+    "eip1559": true,
+    "automata_dcap_attestation_fee": "0xE28ea4E574871CA6A4331d6692bd3DD602Fb4f76",
+    "pccs_router": "0xfFC62c8851F54723206235E24af1bf10b9ea1d47",
+    "v3_quote_verifier": "0x6E64769A13617f528a2135692484B681Ee1a7169",
+    "v4_quote_verifier": "0x90c14Bd25744d8b1E3971951BD56BfFf24dC053A",
+    "pccs": {
+        "automata_fmspc_tcb_dao": "0xB87a493684Bb643258Ae4887B444c6cB244db935",
+        "automata_pcs_dao": "0x980AEAdb3fa7c2c58A81091D93A819a24A103E6C",
+        "automata_enclave_identity_dao": "0x5eFDd14Bbfba36992f66a64653962BB0B8Ef1E26"
+    }
+}

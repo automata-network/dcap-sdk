@@ -16,6 +16,8 @@ The DCAP portal is used to provide an entry point for [Automata DCAP attestation
 * forge
 * pnpm / npm
 
+## Workflow
+
 ```mermaid
 sequenceDiagram
   autonumber
@@ -34,3 +36,8 @@ else
 	P->>-U: error VERIFICATION_FAILED()
 end
 ```
+
+## Integation
+
+We designed [DcapPortal](src/DcapPortal.sol) to handle the verification logic. Once verification succeeds, DcapPortal triggers a callback to the target contract. 
+We provide an example to demonstrate how to integrate with it: [VerifiedCounter](src/examples/VerifiedCounter.sol)

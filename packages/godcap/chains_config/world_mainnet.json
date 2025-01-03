@@ -1,0 +1,16 @@
+{
+    "name": "World Mainnet",
+    "chain_id": 480,
+    "testnet": false,
+    "one_rpc": "",
+    "eip1559": true,
+    "automata_dcap_attestation_fee": "0xE26E11B257856B0bEBc4C759aaBDdea72B64351F",
+    "pccs_router": "0x09bBC921be046726bb5b694A49888e4e2e7AA9C3",
+    "v3_quote_verifier": "0xF38a49322cAA0Ead71D4B1cF2afBb6d02BE5FC96",
+    "v4_quote_verifier": "0xC86EE37Ee5030B9fF737F3E71f7611Abf5dfD9B7",
+    "pccs": {
+        "automata_fmspc_tcb_dao": "0x868c18869f68E0E0b0b7B2B4439f7fDDd0421e6b",
+        "automata_pcs_dao": "0x86f8865BCe8BE62CB8096b5B94fA3fB3a6ED330c",
+        "automata_enclave_identity_dao": "0x28111536292b34f37120861A46B39BF39187d73a"
+    }
+}

@@ -63,7 +63,7 @@ func (q *QuoteParser) SgxExt(pck *x509.Certificate) ([]SgxExt, error) {
 	return nil, nil
 }
 
-func (q *QuoteParser) TcbInfo(ctx context.Context, ps *pccs.Server, fmspc string) (*pccs.TcbInfo, error) {
+func (q *QuoteParser) TcbInfo(ctx context.Context, ps *pccs.Client, fmspc string) (*pccs.TcbInfo, error) {
 	tcbType := q.spec.TcbType()
 	tcbVersion := q.spec.TcbVersion()
 
@@ -74,7 +74,7 @@ func (q *QuoteParser) TcbInfo(ctx context.Context, ps *pccs.Server, fmspc string
 	return tcbInfo, nil
 }
 
-func (q *QuoteParser) EnclaveID(ctx context.Context, ps *pccs.Server) (*pccs.EnclaveIdentityInfo, error) {
+func (q *QuoteParser) EnclaveID(ctx context.Context, ps *pccs.Client) (*pccs.EnclaveIdentityInfo, error) {
 	info, err := ps.GetEnclaveID(ctx, q.spec.EnclaveIDType(), q.spec.Version())
 	if err != nil {
 		return nil, logex.Trace(err)

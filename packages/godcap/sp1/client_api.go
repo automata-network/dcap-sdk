@@ -13,14 +13,17 @@ import (
 	"github.com/chzyer/logex"
 )
 
+// GetNonceRequest represents a request to get the nonce for an account.
 type GetNonceRequest struct {
 	Address []byte `json:"address"`
 }
 
+// GetNonceResponse represents the response containing the nonce.
 type GetNonceResponse struct {
 	Nonce uint64 `json:"nonce,string"`
 }
 
+// RpcGetNonce retrieves the nonce for the client's public address.
 func (c *Client) RpcGetNonce(ctx context.Context) (uint64, error) {
 	addr := c.Public()
 	var res GetNonceResponse
@@ -30,6 +33,7 @@ func (c *Client) RpcGetNonce(ctx context.Context) (uint64, error) {
 	return res.Nonce, nil
 }
 
+// CreateProofRequest represents a request to create a proof.
 type CreateProofRequest struct {
 	/// The signature of the message.
 	Signature []byte `json:"signature"`
@@ -43,6 +47,7 @@ type CreateProofRequest struct {
 	CircuitVersion string `json:"circuit_version"`
 }
 
+// CreateProofResponse represents the response containing proof details.
 type CreateProofResponse struct {
 	/// The proof identifier.
 	ProofId string `json:"proof_id"`
@@ -52,6 +57,7 @@ type CreateProofResponse struct {
 	StdinUrl string `json:"stdin_url"`
 }
 
+// RpcCreateProof creates a proof with the given parameters.
 func (c *Client) RpcCreateProof(ctx context.Context, nonce uint64, deadline uint64, mode ProofMode) (*CreateProofResponse, error) {
 	sig, err := c.auth.SignMessage(&CreateProofMsg{
 		Nonce:    nonce,
@@ -76,6 +82,7 @@ func (c *Client) RpcCreateProof(ctx context.Context, nonce uint64, deadline uint
 	return &res, nil
 }
 
+// SubmitProofRequest represents a request to submit a proof.
 type SubmitProofRequest struct {
 	/// The signature of the message.
 	Signature []byte `json:"signature"`
@@ -85,9 +92,10 @@ type SubmitProofRequest struct {
 	ProofId string `json:"proof_id"`
 }
 
-// / The response for submitting a proof, empty on success.
+// SubmitProofResponse represents the response for submitting a proof, empty on success.
 type SubmitProofResponse struct{}
 
+// RpcSubmitProof submits the proof with the given nonce and proof ID.
 func (c *Client) RpcSubmitProof(ctx context.Context, nonce uint64, proofId string) error {
 	var submitRes SubmitProofResponse
 	sig, err := c.auth.SignMessage(&SubmitProofMsg{Nonce: nonce, ProofId: proofId})
@@ -104,6 +112,7 @@ func (c *Client) RpcSubmitProof(ctx context.Context, nonce uint64, proofId strin
 	return nil
 }
 
+// Prove creates and submits a proof, then polls for the proof status.
 func (c *Client) Prove(ctx context.Context, elf []byte, stdin *SP1Stdin) (*SP1ProofWithPublicValues, error) {
 	proofId, err := c.CreateProof(ctx, elf, stdin, ProofModeGroth16)
 	if err != nil {
@@ -116,6 +125,7 @@ func (c *Client) Prove(ctx context.Context, elf []byte, stdin *SP1Stdin) (*SP1Pr
 	return proof, nil
 }
 
+// CreateProof creates a proof and uploads the necessary files.
 func (c *Client) CreateProof(ctx context.Context, elf []byte, stdin *SP1Stdin, mode ProofMode) (string, error) {
 	nonce, err := c.RpcGetNonce(ctx)
 	if err != nil {
@@ -148,11 +158,12 @@ func (c *Client) CreateProof(ctx context.Context, elf []byte, stdin *SP1Stdin, m
 	return createProofRes.ProofId, nil
 }
 
+// GetProofStatusRequest represents a request to get the status of a proof.
 type GetProofStatusRequest struct {
 	ProofId string `json:"proof_id"`
 }
 
-// / The response for a proof status request.
+// GetProofStatusResponse represents the response containing the proof status.
 type GetProofStatusResponse struct {
 	/// The status of the proof request.
 	Status string `json:"status"`
@@ -165,6 +176,7 @@ type GetProofStatusResponse struct {
 	UnclaimDescription string `json:"unclaim_description"`
 }
 
+// RpcGetProofStatus retrieves the status of the proof with the given proof ID.
 func (c *Client) RpcGetProofStatus(ctx context.Context, proofId string) (*GetProofStatusResponse, error) {
 	var res GetProofStatusResponse
 	if err := c.api("GetProofStatus", &GetProofStatusRequest{ProofId: proofId}, &res); err != nil {
@@ -173,6 +185,7 @@ func (c *Client) RpcGetProofStatus(ctx context.Context, proofId string) (*GetPro
 	return &res, nil
 }
 
+// SP1ProofWithPublicValues represents a proof along with its public values.
 type SP1ProofWithPublicValues struct {
 	Proof        SP1Proof
 	Stdin        SP1Stdin
@@ -180,6 +193,7 @@ type SP1ProofWithPublicValues struct {
 	Sp1Version   bincode.String
 }
 
+// Bytes serializes the proof with public values into bytes.
 func (p *SP1ProofWithPublicValues) Bytes() ([]byte, error) {
 	switch p.Proof.Type.Raw() {
 	case 3: // Groth16
@@ -197,14 +211,17 @@ func (p *SP1ProofWithPublicValues) Bytes() ([]byte, error) {
 	}
 }
 
+// New creates a new instance of SP1ProofWithPublicValues.
 func (p *SP1ProofWithPublicValues) New() bincode.FromBin {
 	return new(SP1ProofWithPublicValues)
 }
 
+// String returns a string representation of SP1ProofWithPublicValues.
 func (p *SP1ProofWithPublicValues) String() string {
 	return fmt.Sprintf("SP1ProofWithPublicValues{proof: %v, stdin: %v, public_values: %v, sp1_version: %v}", p.Proof.String(), p.Stdin.String(), p.PublicValues.String(), p.Sp1Version.String())
 }
 
+// FromBin deserializes the proof with public values from bytes.
 func (p *SP1ProofWithPublicValues) FromBin(data []byte) ([]byte, error) {
 	var err error
 	data, err = p.Proof.FromBin(data)
@@ -226,15 +243,18 @@ func (p *SP1ProofWithPublicValues) FromBin(data []byte) ([]byte, error) {
 	return data, nil
 }
 
+// SP1Proof represents a proof with its type and specific proof data.
 type SP1Proof struct {
 	Type    bincode.U32
 	Groth16 *Groth16Bn254Proof
 }
 
+// New creates a new instance of SP1Proof.
 func (p *SP1Proof) New() bincode.FromBin {
 	return new(SP1Proof)
 }
 
+// String returns a string representation of SP1Proof.
 func (p *SP1Proof) String() string {
 	if uint32(p.Type) == 3 {
 		return fmt.Sprintf("SP1Proof:Groth16(%v)", p.Groth16.String())
@@ -243,6 +263,7 @@ func (p *SP1Proof) String() string {
 	}
 }
 
+// FromBin deserializes the proof from bytes.
 func (p *SP1Proof) FromBin(data []byte) ([]byte, error) {
 	var err error
 	data, err = p.Type.FromBin(data)
@@ -262,6 +283,7 @@ func (p *SP1Proof) FromBin(data []byte) ([]byte, error) {
 	return data, nil
 }
 
+// Groth16Bn254Proof represents a Groth16 proof with specific data.
 type Groth16Bn254Proof struct {
 	PublicInputs    [2]bincode.String
 	EncodedProof    bincode.String
@@ -269,46 +291,57 @@ type Groth16Bn254Proof struct {
 	Groth16VkeyHash bincode.Bytes32
 }
 
+// New creates a new instance of Groth16Bn254Proof.
 func (p *Groth16Bn254Proof) New() bincode.FromBin {
 	return new(Groth16Bn254Proof)
 }
 
+// String returns a string representation of Groth16Bn254Proof.
 func (p *Groth16Bn254Proof) String() string {
 	return fmt.Sprintf("Groth16Bn254Proof{public_inputs: %v, encoded_proof: %v, raw_proof: %v, groth16_vkey_hash: %v}", p.PublicInputs, p.EncodedProof, p.RawProof, p.Groth16VkeyHash)
 }
 
+// FromBin deserializes the Groth16 proof from bytes.
 func (p *Groth16Bn254Proof) FromBin(data []byte) ([]byte, error) {
 	return bincode.UnmarshalFields(data, []bincode.FromBin{&p.PublicInputs[0], &p.PublicInputs[1], &p.EncodedProof, &p.RawProof, &p.Groth16VkeyHash})
 }
 
+// Buffer represents a buffer with binary data.
 type Buffer struct {
 	Data bincode.Bytes
 }
 
+// String returns a string representation of Buffer.
 func (b *Buffer) String() string {
 	return fmt.Sprintf("Buffer{data: %v}", b.Data.String())
 }
 
+// FromBin deserializes the buffer from bytes.
 func (b *Buffer) FromBin(data []byte) ([]byte, error) {
 	return bincode.UnmarshalFields(data, []bincode.FromBin{&b.Data})
 }
 
+// SP1PublicValues represents public values associated with a proof.
 type SP1PublicValues struct {
 	Buffer Buffer
 }
 
+// New creates a new instance of SP1PublicValues.
 func (v *SP1PublicValues) New() bincode.FromBin {
 	return new(SP1PublicValues)
 }
 
+// String returns a string representation of SP1PublicValues.
 func (v *SP1PublicValues) String() string {
 	return fmt.Sprintf("SP1PublicValues{buffer: %v}", v.Buffer.String())
 }
 
+// FromBin deserializes the public values from bytes.
 func (v *SP1PublicValues) FromBin(data []byte) ([]byte, error) {
 	return v.Buffer.FromBin(data)
 }
 
+// PollProof polls the status of the proof until it is fulfilled or an error occurs.
 func (c *Client) PollProof(ctx context.Context, proofId string, interval time.Duration) (*SP1ProofWithPublicValues, error) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -360,31 +393,38 @@ func (c *Client) PollProof(ctx context.Context, proofId string, interval time.Du
 	}
 }
 
+// SP1Stdin represents the standard input for SP1.
 type SP1Stdin struct {
 	Buffer bincode.Collection[*bincode.Bytes]
 	Ptr    bincode.U64
 	Proofs bincode.Collection[*bincode.U32]
 }
 
+// NewSP1StdinFromInput creates a new SP1Stdin from the given input bytes.
 func NewSP1StdinFromInput(input []byte) *SP1Stdin {
 	return &SP1Stdin{
 		Buffer: bincode.Collection[*bincode.Bytes]([]*bincode.Bytes{(*bincode.Bytes)(&input)}),
 	}
 }
 
+// New creates a new instance of SP1Stdin.
 func (s *SP1Stdin) New() bincode.FromBin {
 	return new(SP1Stdin)
 }
+
+// String returns a string representation of SP1Stdin.
 func (s *SP1Stdin) String() string {
 	return fmt.Sprintf("SP1Stdin(%v)", len(s.Buffer))
 }
 
+// FromBin deserializes the standard input from bytes.
 func (s *SP1Stdin) FromBin(data []byte) ([]byte, error) {
 	return bincode.UnmarshalFields(data, []bincode.FromBin{
 		&s.Buffer, &s.Ptr, &s.Proofs,
 	})
 }
 
+// Bincode serializes the standard input into bytes.
 func (s *SP1Stdin) Bincode() []byte {
 	var buf []byte
 	var led = binary.LittleEndian

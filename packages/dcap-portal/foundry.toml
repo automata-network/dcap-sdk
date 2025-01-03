@@ -5,6 +5,9 @@ libs = ["lib"]
 remappings = [
     "forge-std/=node_modules/forge-std/src",
     "@automata-dcap-attestation/=node_modules/automata-dcap-attestation/",
+    "@openzeppelin=node_modules/@openzeppelin",
 ]
+
+fs_permissions = [{ access = "read-write", path = "./out/deploy" }]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

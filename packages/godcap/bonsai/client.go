@@ -17,7 +17,7 @@ type ReceiptKind uint8
 
 const (
 	ReceiptGroth16  ReceiptKind = 0
-	ReceiptSuccinct             = 1
+	ReceiptSuccinct ReceiptKind = 1
 )
 
 type Config struct {

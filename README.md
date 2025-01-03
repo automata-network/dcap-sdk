@@ -11,4 +11,4 @@
 
 
 * **[dcap-portal](./packages/dcap-portal/)**: DCAP Portal Contract
-* **[godcap](./packages/godcap/)**: Go SDK for interactive with [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation)
+* **[Go Dcap](./packages/godcap/)**: Go SDK for interactive with [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation)

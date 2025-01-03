@@ -3,17 +3,47 @@ pragma solidity ^0.8.13;
 
 import {IDcapAttestation} from "./interfaces/IDcapAttestation.sol";
 import {IDcapPortal} from "./interfaces/IDcapPortal.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract DcapPortal is IDcapPortal {
+contract DcapPortal is IDcapPortal, UUPSUpgradeable, OwnableUpgradeable {
     uint16 constant MAX_BP = 10_000;
     bytes4 constant MAGIC_NUMBER = 0xDCA0DCA0;
     IDcapAttestation dcapAttestation;
 
-    constructor(address _Attestationaddress) {
+    /**
+     * @dev Initializes the contract setting the owner and attestation address.
+     * @param owner The address of the contract owner.
+     * @param _Attestationaddress The address of the attestation contract.
+     */
+    function initialize(address owner, address _Attestationaddress) public initializer {
+        __Ownable_init(owner);
+        __UUPSUpgradeable_init();
         dcapAttestation = IDcapAttestation(_Attestationaddress);
     }
 
-    function verifyOnChain(bytes calldata rawQuote, Callback calldata callback)
+    /**
+     * @dev Updates the attestation contract address. Can only be called by the owner.
+     * @param _newAttestationAddress The new attestation contract address.
+     */
+    function updateAttestationAddress(address _newAttestationAddress) external onlyOwner {
+        dcapAttestation = IDcapAttestation(_newAttestationAddress);
+    }
+
+    /**
+     * @dev Authorizes the upgrade of the contract. Can only be called by the owner.
+     * @param newImplementation The address of the new implementation contract.
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /**
+     * @dev Verifies the quote on-chain and calls the callback function.
+     * @param rawQuote The raw quote data.
+     * @param callback The callback function to be called after verification.
+     * @return verifiedOutput The verified output data.
+     * @return callbackOutput The output data from the callback function.
+     */
+    function verifyAndAttestOnChain(bytes calldata rawQuote, Callback calldata callback)
         external
         payable
         returns (bytes memory verifiedOutput, bytes memory callbackOutput)
@@ -28,7 +58,13 @@ contract DcapPortal is IDcapPortal {
         return (verifiedOutput, callbackOutput);
     }
 
-    function estimateFeeBaseVerifyOnChain(bytes calldata rawQuote) external payable returns (uint256) {
+    /**
+     * @dev Estimates the fee for verifying the quote on-chain.
+     * @param rawQuote The raw quote data.
+     * @return The estimated fee.
+     * @notice The actual fee is determined by multiplying the base fee with the gas price.
+     */
+    function estimateBaseFeeVerifyOnChain(bytes calldata rawQuote) external payable returns (uint256) {
         uint16 bp = dcapAttestation.getBp();
         uint256 gasBefore = gasleft();
         dcapAttestation.verifyAndAttestOnChain{value: msg.value}(rawQuote);
@@ -36,6 +72,15 @@ contract DcapPortal is IDcapPortal {
         return (gasBefore - gasAfter) * bp / MAX_BP;
     }
 
+    /**
+     * @dev Verifies the quote with a ZK proof and calls the callback function.
+     * @param output The output data.
+     * @param zkCoprocessor The ZK coprocessor type.
+     * @param proofBytes The proof bytes.
+     * @param callback The callback function to be called after verification.
+     * @return verifiedOutput The verified output data.
+     * @return callbackOutput The output data from the callback function.
+     */
     function verifyAndAttestWithZKProof(
         bytes calldata output,
         IDcapAttestation.ZkCoProcessorType zkCoprocessor,
@@ -53,7 +98,15 @@ contract DcapPortal is IDcapPortal {
         return (verifiedOutput, callbackOutput);
     }
 
-    function estimateFeeBaseVerifyAndAttestWithZKProof(
+    /**
+     * @dev Estimates the fee for verifying the quote with a ZK proof.
+     * @param output The output data.
+     * @param zkCoprocessor The ZK coprocessor type.
+     * @param proofBytes The proof bytes.
+     * @return The estimated fee.
+     * @notice The actual fee is determined by multiplying the base fee with the gas price.
+     */
+    function estimateBaseFeeVerifyAndAttestWithZKProof(
         bytes calldata output,
         IDcapAttestation.ZkCoProcessorType zkCoprocessor,
         bytes calldata proofBytes
@@ -65,6 +118,11 @@ contract DcapPortal is IDcapPortal {
         return (gasBefore - gasAfter) * bp / 10000;
     }
 
+    /**
+     * @dev Calculates the attestation fee based on the callback value.
+     * @param callbackValue The value of the callback.
+     * @return The attestation fee.
+     */
     function _getAttestationFee(uint256 callbackValue) internal returns (uint256) {
         if (callbackValue > msg.value) {
             revert INSUFFICIENT_FEE();
@@ -72,6 +130,12 @@ contract DcapPortal is IDcapPortal {
         return msg.value - callbackValue;
     }
 
+    /**
+     * @dev Calls the callback function with the provided output data.
+     * @param callback The callback function to be called.
+     * @param output The output data.
+     * @return The output data from the callback function.
+     */
     function _call(Callback calldata callback, bytes memory output) internal returns (bytes memory) {
         if (callback.to == address(0)) {
             return new bytes(0);

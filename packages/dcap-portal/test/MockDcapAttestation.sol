@@ -22,7 +22,7 @@ contract MockDcapAttestation {
         collectFee
         returns (bool success, bytes memory output)
     {
-        for (uint256 i=0; i<300; i++) {
+        for (uint256 i = 0; i < 300; i++) {
             storages[i] = i;
         }
         return (true, rawQuote);

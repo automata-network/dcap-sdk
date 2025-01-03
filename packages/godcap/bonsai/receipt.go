@@ -38,6 +38,7 @@ func (r *Receipt) String() string {
 type InnerReceipt struct {
 	Type uint32
 	// type=0
+	// skip
 
 	// type=1 Succinct(SuccinctReceipt<ReceiptClaim>),
 	Succinct *SuccinctReceipt[*ReceiptClaim]

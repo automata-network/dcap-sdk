@@ -5,12 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/automata-network/dcap-sdk/packages/godcap/godcapgen"
+	"github.com/automata-network/dcap-sdk/packages/godcap/abigen"
 	"github.com/chzyer/logex"
 )
 
 func genabi(name string) {
-	if err := godcapgen.GenAbiByForgeOutput("../dcap-portal/out", name, "stubs"); err != nil {
+	if err := abigen.GenAbiByForgeOutput("../dcap-portal/out", name, "stubs"); err != nil {
 		logex.Fatal(err)
 	}
 }
@@ -20,7 +20,7 @@ func genPccsAbi(name string) {
 	if onChainPccs == "" {
 		onChainPccs = filepath.Join("..", "..", "..", "automata-on-chain-pccs")
 	}
-	if err := godcapgen.GenAbiByForgeOutput(filepath.Join(onChainPccs, "out"), name, "stubs"); err != nil {
+	if err := abigen.GenAbiByForgeOutput(filepath.Join(onChainPccs, "out"), name, "stubs"); err != nil {
 		logex.Fatal(err)
 	}
 }

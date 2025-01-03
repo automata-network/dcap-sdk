@@ -17,12 +17,11 @@ Go SDK for interactive with [Automata DCAP attestation](http://github.com/automa
 ## Verify on chain
 ```go
 func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) error {
-    privateKey, err := crypto.HexToECDSA(privateKeyStr)
-    if err != nil {
-        return err
-    }
-
-    portal, err := godcap.NewDcapPortal(ctx, RPC_URL)
+    // Create a new DCAP portal instance
+    portal, err := godcap.NewDcapPortal(ctx, 
+        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+        godcap.WithPrivateKey(privateKeyStr),
+    )
     if err != nil {
         return err
     }
@@ -33,47 +32,33 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
         .WithParams("setNumber", big.NewInt(10))
         .WithTo(verifiedCounterAddr)
 
-    opts, err := portal.BuildTransactOpts(ctx, privateKey)
+    // Verify the quote on chain
+    tx, err := portal.VerifyOnChain(nil, quote, callback)
     if err != nil {
         return err
     }
 
-    tx, err := portal.VerifyOnChain(opts, quote, callback)
-    if err != nil {
-        return err
-    }
-
-    // waiting 
+    // waiting for the transaction receipt
     receipt := <-portal.WaitTx(ctx, tx)
     fmt.Printf("%#v\n", receipt)
 }
 ```
 
-## Verify with ZkProof (Risc0 and Succinct)
+## Verify with Risc0 ZkProof
 ```go
+// export BONSAI_API_KEY=${API_KEY}
 func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
-    privateKey, err := crypto.HexToECDSA(privateKeyStr)
+    // Create a new DCAP portal instance
+    portal, err := godcap.NewDcapPortal(ctx, 
+        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+        godcap.WithPrivateKey(privateKeyStr),
+    )
     if err != nil {
         return err
     }
 
-    portal, err := godcap.NewDcapPortal(ctx, RPC_URL)
-    if err != nil {
-        return err
-    }
-    if err := portal.EnableZkProof(&zkdcap.ZkProofConfig{
-        Bonsai: &bonsai.Config {
-            ApiKey: $BONSAI_API_KEY,
-        },
-        Sp1: &sp1.Config {
-            PrivateKey: $SP1_PRIVATE_KEY,
-        },
-    }); err != nil {
-        return err
-    }
-
-    zkType := zkdcap.ZkTypeRiscZero // or zkdcap.ZkTypeSuccinct
-    zkproof, err := portal.GenerateZkProof(ctx, zkType, quote)
+    // Generate a ZkProof using Risc0, this function will take a while to finish
+    zkproof, err := portal.GenerateZkProof(ctx, zkdcap.ZkTypeRiscZero, quote)
     if err != nil {
         return err
     }
@@ -84,17 +69,51 @@ func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) 
         .WithParams("setNumber", big.NewInt(10))
         .WithTo(verifiedCounterAddr)
 
-    opts, err := portal.BuildTransactOpts(ctx, privateKey)
+    // Verify the ZkProof and attest on chain
+    tx, err := portal.VerifyAndAttestWithZKProof(nil, zkproof, callback)
     if err != nil {
         return err
     }
 
-    tx, err := portal.VerifyAndAttestWithZKProof(opts, zkproof, callback)
+    // waiting for the transaction receipt
+    receipt := <-portal.WaitTx(ctx, tx)
+    fmt.Printf("%#v\n", receipt)
+}
+```
+
+
+## Verify with Succinct ZkProof
+```go
+// export SP1_PRIVATE_KEY=${KEY}
+func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
+    // Create a new DCAP portal instance
+    portal, err := godcap.NewDcapPortal(ctx, 
+        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+        godcap.WithPrivateKey(privateKeyStr),
+    )
     if err != nil {
         return err
     }
 
-    // waiting 
+    // Generate a ZkProof using Succinct, this function will take a while to finish
+    zkproof, err := portal.GenerateZkProof(ctx, zkdcap.ZkTypeSuccinct, quote)
+    if err != nil {
+        return err
+    }
+
+    // setup a callback function when the verification success
+    //  function setNumber(uint256 newNumber) public fromDcapPortal
+    callback := NewCallbackFromAbiJSON(VerifiedCounter.VerifiedCounterABI)
+        .WithParams("setNumber", big.NewInt(10))
+        .WithTo(verifiedCounterAddr)
+
+    // Verify the ZkProof and attest on chain
+    tx, err := portal.VerifyAndAttestWithZKProof(nil, zkproof, callback)
+    if err != nil {
+        return err
+    }
+
+    // waiting for the transaction receipt
     receipt := <-portal.WaitTx(ctx, tx)
     fmt.Printf("%#v\n", receipt)
 }

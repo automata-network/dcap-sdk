@@ -7,8 +7,7 @@ import {VerifiedCounter} from "../src/examples/verifiedCounter.sol";
 contract VerifiedCounterScript is Script {
     address dcapPortalAddr = vm.envAddress("DCAP_PORTAL");
 
-    function setUp() public {
-    }
+    function setUp() public {}
 
     function run() public {
         vm.startBroadcast();

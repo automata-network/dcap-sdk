@@ -20,7 +20,7 @@ type Collateral struct {
 	PckPlatformCrl  []byte
 }
 
-func NewCollateralFromQuoteParser(ctx context.Context, parser *parser.QuoteParser, ps *pccs.Server) (*Collateral, error) {
+func NewCollateralFromQuoteParser(ctx context.Context, parser *parser.QuoteParser, ps *pccs.Client) (*Collateral, error) {
 	certs, err := parser.Certificates()
 	if err != nil {
 		return nil, logex.Trace(err)

@@ -5,9 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {MockDcapAttestation} from "../test/MockDcapAttestation.sol";
 
 contract MockDcapAttestrationScript is Script {
-
-    function setUp() public {
-    }
+    function setUp() public {}
 
     function run() public {
         vm.startBroadcast();

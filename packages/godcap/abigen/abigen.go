@@ -1,4 +1,4 @@
-package godcapgen
+package abigen
 
 import (
 	"encoding/json"
