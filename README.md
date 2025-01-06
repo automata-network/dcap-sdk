@@ -10,5 +10,14 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 
-* **[dcap-portal](./packages/dcap-portal/)**: DCAP Portal Contract
+## Introduction
+
+The DCAP SDK provides a toolkit for integrating with the [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation), enabling developers to perform low-intrusion verification of DCAP Attestation Reports.
+
+![./docs/architecture.png](./docs/architecture.png)
+
+## Components
+
+* **[dcap-portal](./packages/dcap-portal/)**: DCAP Portal Contract. It first verifies the attestation report, then sends a callback to your contract upon successful verification.
 * **[Go Dcap](./packages/godcap/)**: Go SDK for interactive with [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation)
+* Rust SDK: WIP
