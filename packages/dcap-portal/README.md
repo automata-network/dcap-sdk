@@ -47,13 +47,13 @@ We provide an example to demonstrate how to integrate with it: [VerifiedCounter]
 
 **1. Import DcapLibCallback.sol**
 
-```sol
+```solidity
 import "@dcap-portal/lib/DcapLibCallback.sol"
 ```
 
 **2. Extend to your contract**
 
-```sol
+```solidity
 contract VerifiedCounter is DcapLibCallback {
     constructor(address _dcapPortalAddress) {
         // Initial the DcapLibCallback
@@ -63,7 +63,7 @@ contract VerifiedCounter is DcapLibCallback {
 ```
 
 **3. Add your function and restrict the caller**
-```sol
+```solidity
 contract VerifiedCounter is DcapLibCallback {
     //...
 

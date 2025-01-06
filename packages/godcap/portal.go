@@ -275,7 +275,7 @@ func (p *DcapPortal) VerifyAndAttestOnChain(opts *bind.TransactOpts, rawQuote []
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	feeBase, err := p.EstimateFeeBaseVerifyOnChain(opts.Context, rawQuote)
+	feeBase, err := p.EstimateBaseFeeVerifyOnChain(opts.Context, rawQuote)
 	if err != nil {
 		return nil, logex.Trace(p.decodeErr(err))
 	}
@@ -323,7 +323,7 @@ func (p *DcapPortal) VerifyAndAttestWithZKProof(opts *bind.TransactOpts, zkProof
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	feeBase, err := p.EstimateFeeBaseVerifyAndAttestWithZKProof(opts.Context, zkProof)
+	feeBase, err := p.EstimateBaseFeeVerifyAndAttestWithZKProof(opts.Context, zkProof)
 	if err != nil {
 		return nil, logex.Trace(p.decodeErr(err))
 	}
@@ -338,7 +338,7 @@ func (p *DcapPortal) VerifyAndAttestWithZKProof(opts *bind.TransactOpts, zkProof
 
 // EstimateFeeBaseVerifyOnChain estimates the base fee for quote verification.
 // The actual fee will be base fee multiplied by gas price.
-func (p *DcapPortal) EstimateFeeBaseVerifyOnChain(ctx context.Context, rawQuote []byte) (*big.Int, error) {
+func (p *DcapPortal) EstimateBaseFeeVerifyOnChain(ctx context.Context, rawQuote []byte) (*big.Int, error) {
 	result, err := p.callContract(ctx, &p.abi, "estimateBaseFeeVerifyOnChain", rawQuote)
 	if err != nil {
 		return nil, logex.Trace(err)
@@ -348,7 +348,7 @@ func (p *DcapPortal) EstimateFeeBaseVerifyOnChain(ctx context.Context, rawQuote 
 
 // EstimateFeeBaseVerifyAndAttestWithZKProof estimates the base fee for ZK proof verification and attestation.
 // The actual fee will be base fee multiplied by gas price.
-func (p *DcapPortal) EstimateFeeBaseVerifyAndAttestWithZKProof(ctx context.Context, zkProof *zkdcap.ZkProof) (*big.Int, error) {
+func (p *DcapPortal) EstimateBaseFeeVerifyAndAttestWithZKProof(ctx context.Context, zkProof *zkdcap.ZkProof) (*big.Int, error) {
 	result, err := p.callContract(ctx, &p.abi, "estimateBaseFeeVerifyAndAttestWithZKProof", zkProof.Output, uint8(zkProof.Type), zkProof.Proof)
 	if err != nil {
 		return nil, logex.Trace(err)

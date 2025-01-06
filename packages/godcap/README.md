@@ -79,8 +79,11 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
 
 ## Verify with Risc0 ZkProof
 ```go
-// export BONSAI_API_KEY=${API_KEY}
-func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
+//
+// Make sure you export the API key to BONSAI_API_KEY
+//   export BONSAI_API_KEY=${API_KEY}
+
+func VerifyWithRisc0ZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
     portal, err := godcap.NewDcapPortal(ctx, 
         godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
@@ -117,8 +120,12 @@ func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) 
 
 ## Verify with Succinct ZkProof
 ```go
-// export SP1_PRIVATE_KEY=${KEY}
-func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
+
+//
+// Make sure you export the Succinct private key to SP1_PRIVATE_KEY
+//   export SP1_PRIVATE_KEY=${KEY}
+
+func VerifyWithSuccinctZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
     portal, err := godcap.NewDcapPortal(ctx, 
         godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
