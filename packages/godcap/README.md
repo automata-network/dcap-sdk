@@ -9,10 +9,43 @@
 # Go DCAP
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Go SDK for interactive with [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation)
+Go SDK for interacting with [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation)
+
+# Workflow
+
+```mermaid
+sequenceDiagram
+  autonumber
+    participant U as User
+    participant P as Portal
+    participant A as DCAP Attestation
+    participant C as User Contract
+    
+note over U: Generate attestation report
+U->>+P: Send Attestation Report
+P->>A: Verify Attestation Report
+alt Verification Passed
+	P->>+C: Callback
+    note over C: Check from portal
+    note over C: Extract Attestation Output
+    C->>-P: Done
+	P->>U: Done
+else
+	P->>-U: error VERIFICATION_FAILED()
+end
+```
+
+# Features
+
+* Automatically calculate the fee of the attestation verification
+* Generate ZkProof through Remote Prover Network
+* Submit via ZkProof or Attestation Report
+* [WIP] Generate Attestation Report
 
 
 # Examples
+
+Note: VerifiedCounter can be referenced [here](../dcap-portal/src/examples/VerifiedCounter.sol)
 
 ## Verify on chain
 ```go
@@ -118,3 +151,4 @@ func VerifyWithZkProof(ctx context.Context, quote []byte, privateKeyStr string) 
     fmt.Printf("%#v\n", receipt)
 }
 ```
+

@@ -30,7 +30,10 @@ note over U: Generate attestation report
 U->>+P: Send Attestation Report
 P->>A: Verify Attestation Report
 alt Verification Passed
-	P->>C: Callback
+	P->>+C: Callback
+    note over C: Check from portal
+    note over C: Extract Attestation Output
+    C->>-P: Done
 	P->>U: Done
 else
 	P->>-U: error VERIFICATION_FAILED()
@@ -73,4 +76,4 @@ contract VerifiedCounter is DcapLibCallback {
     }
 }
 ```
-This way, it ensures that your call can only be invoked with a valid attestation report.
+This way ensures that your call can only be invoked after a successful attestation report verification.
