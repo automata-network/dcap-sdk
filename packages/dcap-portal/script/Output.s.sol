@@ -28,11 +28,7 @@ contract Output is Script {
     }
 
     function saveJson(string memory json) public {
-        string memory finalJson = vm.serializeString(
-            json,
-            "remark",
-            outputName
-        );
+        string memory finalJson = vm.serializeString(json, "remark", outputName);
         vm.writeJson(finalJson, getOutputFilePath());
     }
 

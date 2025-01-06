@@ -6,18 +6,31 @@ import {DcapPortal} from "../src/DcapPortal.sol";
 import {IDcapPortal} from "../src/interfaces/IDcapPortal.sol";
 import {DcapLibCallback} from "../src/lib/DcapLibCallback.sol";
 import {VerifiedCounter} from "../src/examples/VerifiedCounter.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {MockDcapAttestation} from "./MockDcapAttestation.sol";
 
 contract DcapPortalTest is Test {
     MockDcapAttestation attestation;
     DcapPortal public portal;
     VerifiedCounter public counter;
-    uint256 public GAS_USED = 3_000_000;
+    uint256 public GAS_USED = 7_000_000;
 
     function setUp() public {
+        vm.txGasPrice(1);
+
         attestation = new MockDcapAttestation();
         attestation.setBp(10000); // 100% of fee
-        portal = new DcapPortal(address(attestation));
+
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
+        DcapPortal portalImplementation = new DcapPortal();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(portalImplementation),
+            address(proxyAdmin),
+            abi.encodeWithSelector(DcapPortal.initialize.selector, msg.sender, address(attestation))
+        );
+        portal = DcapPortal(address(proxy));
+
         counter = new VerifiedCounter(address(portal));
     }
 
@@ -27,7 +40,7 @@ contract DcapPortalTest is Test {
         uint256 originValue = counter.number();
         IDcapPortal.Callback memory callback =
             IDcapPortal.Callback(deposit, address(counter), abi.encodeWithSignature("deposit()"));
-        portal.verifyOnChain{value: GAS_USED + deposit}(rawQuote, callback);
+        portal.verifyAndAttestOnChain{value: GAS_USED + deposit}(rawQuote, callback);
         assertEq(counter.number(), originValue + deposit);
     }
 
@@ -40,20 +53,19 @@ contract DcapPortalTest is Test {
         counter.deposit();
 
         vm.expectRevert(abi.encodeWithSignature("Insuccifient_Funds()"));
-        portal.verifyOnChain(rawQuote, callback);
+        portal.verifyAndAttestOnChain(rawQuote, callback);
 
         vm.expectEmit(true, true, true, true);
-        emit VerifiedCounter.Report(rawQuote);
-
-        callback.params = abi.encodeWithSignature("report()");
-        portal.verifyOnChain{value: GAS_USED}(rawQuote, callback);
+        emit VerifiedCounter.AttestationOutput(rawQuote);
+        callback.params = abi.encodeWithSignature("debugOutput()");
+        portal.verifyAndAttestOnChain{value: GAS_USED}(rawQuote, callback);
     }
 
     function testFuzz_SetNumber(uint256 x) public {
         bytes memory callData = abi.encodeWithSignature("setNumber(uint256)", x);
         bytes memory rawQuote = hex"0102030405";
         IDcapPortal.Callback memory callback = IDcapPortal.Callback(0, address(counter), callData);
-        portal.verifyOnChain{value: GAS_USED}(rawQuote, callback);
+        portal.verifyAndAttestOnChain{value: GAS_USED}(rawQuote, callback);
         assertEq(counter.number(), x);
     }
 }

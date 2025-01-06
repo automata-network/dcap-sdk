@@ -9,9 +9,9 @@
 ## DCAP Portal
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-The DCAP portal is used to provide an entry point for [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation).
+The DCAP portal provides an entry point for [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation).
 
-## Dependences
+## Dependencies
 
 * forge
 * pnpm / npm
@@ -37,7 +37,40 @@ else
 end
 ```
 
-## Integation
+## Integration
 
 We designed [DcapPortal](src/DcapPortal.sol) to handle the verification logic. Once verification succeeds, DcapPortal triggers a callback to the target contract. 
 We provide an example to demonstrate how to integrate with it: [VerifiedCounter](src/examples/VerifiedCounter.sol)
+
+**1. Import DcapLibCallback.sol**
+
+```sol
+import "@dcap-portal/lib/DcapLibCallback.sol"
+```
+
+**2. Extend to your contract**
+
+```sol
+contract VerifiedCounter is DcapLibCallback {
+    constructor(address _dcapPortalAddress) {
+        // Initial the DcapLibCallback
+        __DcapLibCallbackInit(_dcapPortalAddress);
+    }
+}
+```
+
+**3. Add your function and restrict the caller**
+```sol
+contract VerifiedCounter is DcapLibCallback {
+    //...
+
+    event AttestationReportUserData(bytes);
+
+    function setNumber(uint256 newNumber) public fromDcapPortal {
+        number = newNumber;
+        // get the user data from the attestation report
+        emit AttestationReportUserData(_attestationReportUserData());
+    }
+}
+```
+This way, it ensures that your call can only be invoked with a valid attestation report.
