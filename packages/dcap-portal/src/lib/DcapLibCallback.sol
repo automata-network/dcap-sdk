@@ -61,7 +61,7 @@ abstract contract DcapLibCallback {
         return outputData;
     }
 
-    // Extracts the user data from the attestation report
+    // Extracts the user data from the output
     function _attestationReportUserData() internal pure returns (bytes memory) {
         bytes memory output = _attestationOutput();
 

@@ -71,6 +71,11 @@ contract VerifiedCounter is DcapLibCallback {
 
     function setNumber(uint256 newNumber) public fromDcapPortal {
         number = newNumber;
+
+        // extract data from the output: 
+        //  * https://github.com/automata-network/automata-dcap-attestation/blob/2d8b6b3dd35643081fa7fd98bbb1323a0601b2bb/contracts/bases/QuoteVerifierBase.sol#L143
+        bytes memory attestationOutput = _attestationOutput();
+
         // get the user data from the attestation report
         emit AttestationReportUserData(_attestationReportUserData());
     }

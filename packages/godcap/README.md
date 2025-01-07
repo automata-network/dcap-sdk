@@ -42,14 +42,51 @@ end
 * Submit via ZkProof or Attestation Report
 * [WIP] Generate Attestation Report
 
+# Usage
+
+```go
+func main() {
+    // Initiation
+    portal, err := godcap.NewDcapPortal(ctx, 
+        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+        godcap.WithPrivateKey(privateKeyStr),
+    )
+    // error handling
+
+    var tx *types.Transaction
+
+    // Optional1: verify with zkproof
+    {
+        // generate proof
+        var zkProofType zkdcap.ZkType // zkdcap.ZkTypeRiscZero or zkdcap.ZkTypeSuccinct
+        zkproof, err := portal.GenerateZkProof(ctx, zkProofType, quote)
+        // error handling
+
+        tx, err = portal.VerifyAndAttestWithZKProof(nil, zkproof, callback)
+        // error handling
+    }
+
+    // Optional2: verify on chain
+    {
+        tx, err = portal.VerifyAndAttestOnChain(nil, quote, callback)
+        // error handling
+    }
+
+    receipt := <-portal.WaitTx(ctx, tx)
+    fmt.Printf("%#v\n", receipt)
+}
+```
+
 
 # Examples
 
 Note: VerifiedCounter can be referenced [here](../dcap-portal/src/examples/VerifiedCounter.sol)
 
-## Verify on chain
+<details>
+<summary>Verify on chain</summary>
+
 ```go
-func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) error {
+func VerifyAndAttestOnChain(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
     portal, err := godcap.NewDcapPortal(ctx, 
         godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
@@ -66,7 +103,7 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
         .WithTo(verifiedCounterAddr)
 
     // Verify the quote on chain
-    tx, err := portal.VerifyOnChain(nil, quote, callback)
+    tx, err := portal.VerifyAndAttestOnChain(nil, quote, callback)
     if err != nil {
         return err
     }
@@ -77,7 +114,11 @@ func VerifyOnChain(ctx context.Context, quote []byte, privateKeyStr string) erro
 }
 ```
 
-## Verify with Risc0 ZkProof
+</details>
+
+<details>
+<summary>Verify with Risc0 ZkProof</summary>
+
 ```go
 //
 // Make sure you export the API key to BONSAI_API_KEY
@@ -116,9 +157,12 @@ func VerifyWithRisc0ZkProof(ctx context.Context, quote []byte, privateKeyStr str
     fmt.Printf("%#v\n", receipt)
 }
 ```
+</details>
 
 
-## Verify with Succinct ZkProof
+<details>
+<summary>Verify with Succinct ZkProof</summary>
+
 ```go
 
 //
@@ -159,3 +203,6 @@ func VerifyWithSuccinctZkProof(ctx context.Context, quote []byte, privateKeyStr 
 }
 ```
 
+</details>
+
+For more examples can check from [here](cmd/godcap/examples.go)
