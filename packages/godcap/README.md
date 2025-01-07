@@ -55,7 +55,7 @@ func main() {
 
     var tx *types.Transaction
 
-    // Optional1: verify with zkproof
+    // Option1: verify with zkproof
     {
         // generate proof
         var zkProofType zkdcap.ZkType // zkdcap.ZkTypeRiscZero or zkdcap.ZkTypeSuccinct
@@ -66,7 +66,7 @@ func main() {
         // error handling
     }
 
-    // Optional2: verify on chain
+    // Option2: verify on chain
     {
         tx, err = portal.VerifyAndAttestOnChain(nil, quote, callback)
         // error handling
