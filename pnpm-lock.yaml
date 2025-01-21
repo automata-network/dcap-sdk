@@ -14,12 +14,6 @@ importers:
       '@openzeppelin/contracts-upgradeable':
         specifier: 5.1.0
         version: 5.1.0(@openzeppelin/contracts@5.1.0)
-      automata-dcap-attestation:
-        specifier: https://github.com/automata-network/automata-dcap-attestation
-        version: git+https://git@github.com:automata-network/automata-dcap-attestation.git#b49a9f296a5e0cd8b1f076ec541b1239199cadd2
-      automata-on-chain-pccs:
-        specifier: https://github.com/automata-network/automata-on-chain-pccs
-        version: https://codeload.github.com/automata-network/automata-on-chain-pccs/tar.gz/6eb2c89f5f94730f62dd7624d00639760a97062d
       forge-std:
         specifier: github:foundry-rs/forge-std#v1.9.4
         version: https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262
@@ -34,14 +28,6 @@ packages:
   '@openzeppelin/contracts@5.1.0':
     resolution: {integrity: sha512-p1ULhl7BXzjjbha5aqst+QMLY+4/LCWADXOCsmLHRM77AqiPjnd9vvUN9sosUfhL9JGKpZ0TjEGxgvnizmWGSA==}
 
-  automata-dcap-attestation@git+https://git@github.com:automata-network/automata-dcap-attestation.git#b49a9f296a5e0cd8b1f076ec541b1239199cadd2:
-    resolution: {commit: b49a9f296a5e0cd8b1f076ec541b1239199cadd2, repo: git@github.com:automata-network/automata-dcap-attestation.git, type: git}
-    version: 0.0.0
-
-  automata-on-chain-pccs@https://codeload.github.com/automata-network/automata-on-chain-pccs/tar.gz/6eb2c89f5f94730f62dd7624d00639760a97062d:
-    resolution: {tarball: https://codeload.github.com/automata-network/automata-on-chain-pccs/tar.gz/6eb2c89f5f94730f62dd7624d00639760a97062d}
-    version: 0.0.0
-
   forge-std@https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262:
     resolution: {tarball: https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262}
     version: 1.9.4
@@ -53,9 +39,5 @@ snapshots:
       '@openzeppelin/contracts': 5.1.0
 
   '@openzeppelin/contracts@5.1.0': {}
-
-  automata-dcap-attestation@git+https://git@github.com:automata-network/automata-dcap-attestation.git#b49a9f296a5e0cd8b1f076ec541b1239199cadd2: {}
-
-  automata-on-chain-pccs@https://codeload.github.com/automata-network/automata-on-chain-pccs/tar.gz/6eb2c89f5f94730f62dd7624d00639760a97062d: {}
 
   forge-std@https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262: {}

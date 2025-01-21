@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: APACHE2
 pragma solidity ^0.8.13;
 
-import {IDcapAttestation} from "./interfaces/IDcapAttestation.sol";
-import {IDcapPortal} from "./interfaces/IDcapPortal.sol";
+import {IDcapAttestation} from "@dcap-portal/src/interfaces/IDcapAttestation.sol";
+import {IDcapPortal} from "@dcap-portal/src/interfaces/IDcapPortal.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 

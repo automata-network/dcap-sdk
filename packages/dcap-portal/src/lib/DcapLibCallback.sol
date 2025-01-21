@@ -91,6 +91,24 @@ abstract contract DcapLibCallback {
         return reportData;
     }
 
+    // Extracts the user data from the output
+    function _attestationReportUserDataBytes32() internal pure returns (bytes32, bytes32) {
+        return _splitBytes64(_attestationReportUserData());
+    }
+    
+    function _splitBytes64(
+        bytes memory b
+    ) internal pure returns (bytes32, bytes32) {
+        require(b.length >= 64, "Bytes array too short");
+
+        bytes32 x;
+        bytes32 y;
+        assembly {
+            x := mload(add(b, 32))
+            y := mload(add(b, 64))
+        }
+        return (x, y);
+    }
     // Modifier to restrict function access to the DCAP portal
     modifier fromDcapPortal() {
         if (msg.sender != dcapPortalAddress) {

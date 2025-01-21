@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 // Import the DcapLibCallback library
-import {DcapLibCallback} from "../lib/DcapLibCallback.sol";
+import {DcapLibCallback} from "@dcap-portal/src/lib/DcapLibCallback.sol";
 
 contract VerifiedCounter is DcapLibCallback {
     uint256 public number;

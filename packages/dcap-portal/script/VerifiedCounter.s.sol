@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {VerifiedCounter} from "../src/examples/verifiedCounter.sol";
+import {VerifiedCounter} from "@dcap-portal/src/examples/VerifiedCounter.sol";
 
 contract VerifiedCounterScript is Script {
     address dcapPortalAddr = vm.envAddress("DCAP_PORTAL");

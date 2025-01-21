@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {MockDcapAttestation} from "../test/MockDcapAttestation.sol";
+import {MockDcapAttestation} from "@dcap-portal/test/MockDcapAttestation.sol";
 
 contract MockDcapAttestrationScript is Script {
     function setUp() public {}

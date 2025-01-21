@@ -6,6 +6,7 @@ remappings = [
     "forge-std/=node_modules/forge-std/src",
     "@automata-dcap-attestation/=node_modules/automata-dcap-attestation/",
     "@openzeppelin=node_modules/@openzeppelin",
+    "@dcap-portal=./"
 ]
 
 fs_permissions = [{ access = "read-write", path = "./out/deploy" }]

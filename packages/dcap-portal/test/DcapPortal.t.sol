@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {DcapPortal} from "../src/DcapPortal.sol";
-import {IDcapPortal} from "../src/interfaces/IDcapPortal.sol";
-import {DcapLibCallback} from "../src/lib/DcapLibCallback.sol";
-import {VerifiedCounter} from "../src/examples/VerifiedCounter.sol";
+import {DcapPortal} from "@dcap-portal/src/DcapPortal.sol";
+import {IDcapPortal} from "@dcap-portal/src/interfaces/IDcapPortal.sol";
+import {DcapLibCallback} from "@dcap-portal/src/lib/DcapLibCallback.sol";
+import {VerifiedCounter} from "@dcap-portal/src/examples/VerifiedCounter.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {MockDcapAttestation} from "./MockDcapAttestation.sol";
