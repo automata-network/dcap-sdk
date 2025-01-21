@@ -95,7 +95,7 @@ abstract contract DcapLibCallback {
     }
 
     // this function will make sure the attestation report generated in recent ${maxBlockNumberDiff} blocks
-    function _checkBlockNumber(uint256 blockNumber, bytes32 blockHash, uint256 maxDiff) private view {
+    function _checkBlockNumber(uint256 blockNumber, bytes32 blockHash, uint256 maxDiff) internal view {
         if (blockNumber >= block.number) {
             revert INVALID_BLOCKNUMBER(block.number, blockNumber);
         }
