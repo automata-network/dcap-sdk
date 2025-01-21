@@ -4,6 +4,14 @@ pragma solidity ^0.8.13;
 // Abstract contract for handling callbacks from the DCAP portal
 abstract contract DcapLibCallback {
     address dcapPortalAddress;
+        /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[9] private __gap;
+
+
     bytes4 constant MAGIC_NUMBER = 0xDCA0DCA0;
 
     // Error thrown when the caller is not the DCAP portal
