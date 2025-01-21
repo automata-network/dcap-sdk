@@ -31,7 +31,7 @@ var (
 
 // DcapLibCallbackMetaData contains all meta data concerning the DcapLibCallback contract.
 var DcapLibCallbackMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"error\",\"name\":\"CALLER_NOT_DCAP_PORTAL\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"INVALID_ATTESTATION_OUTPUT\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MAGIC_NUMBER_MISMATCH\",\"inputs\":[]}]",
+	ABI: "[{\"type\":\"error\",\"name\":\"CALLER_NOT_DCAP_PORTAL\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"INVALID_ATTESTATION_OUTPUT\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"INVALID_BLOCKHASH\",\"inputs\":[{\"name\":\"want\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"got\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"INVALID_BLOCKNUMBER\",\"inputs\":[{\"name\":\"current\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"got\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"MAGIC_NUMBER_MISMATCH\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UNKNOWN_VERSION\",\"inputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]",
 }
 
 // DcapLibCallbackABI is the input ABI used to generate the binding from.

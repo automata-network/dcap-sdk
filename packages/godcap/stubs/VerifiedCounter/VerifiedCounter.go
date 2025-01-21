@@ -31,7 +31,7 @@ var (
 
 // VerifiedCounterMetaData contains all meta data concerning the VerifiedCounter contract.
 var VerifiedCounterMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_dcapPortalAddress\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"deposit\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"number\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"report\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"setNumber\",\"inputs\":[{\"name\":\"newNumber\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"Report\",\"inputs\":[{\"name\":\"\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"CALLER_NOT_DCAP_PORTAL\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"INVALID_ATTESTATION_OUTPUT\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MAGIC_NUMBER_MISMATCH\",\"inputs\":[]}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_dcapPortalAddress\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"debugOutput\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"debugReportData\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"deposit\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"number\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"setNumber\",\"inputs\":[{\"name\":\"newNumber\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"AttestationOutput\",\"inputs\":[{\"name\":\"\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"AttestationReportUserData\",\"inputs\":[{\"name\":\"\",\"type\":\"bytes\",\"indexed\":false,\"internalType\":\"bytes\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"CALLER_NOT_DCAP_PORTAL\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"INVALID_ATTESTATION_OUTPUT\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"INVALID_BLOCKHASH\",\"inputs\":[{\"name\":\"want\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"got\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"number\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"INVALID_BLOCKNUMBER\",\"inputs\":[{\"name\":\"current\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"got\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"MAGIC_NUMBER_MISMATCH\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UNKNOWN_VERSION\",\"inputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]",
 }
 
 // VerifiedCounterABI is the input ABI used to generate the binding from.
@@ -211,6 +211,48 @@ func (_VerifiedCounter *VerifiedCounterCallerSession) Number() (*big.Int, error)
 	return _VerifiedCounter.Contract.Number(&_VerifiedCounter.CallOpts)
 }
 
+// DebugOutput is a paid mutator transaction binding the contract method 0x6f653d69.
+//
+// Solidity: function debugOutput() returns()
+func (_VerifiedCounter *VerifiedCounterTransactor) DebugOutput(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _VerifiedCounter.contract.Transact(opts, "debugOutput")
+}
+
+// DebugOutput is a paid mutator transaction binding the contract method 0x6f653d69.
+//
+// Solidity: function debugOutput() returns()
+func (_VerifiedCounter *VerifiedCounterSession) DebugOutput() (*types.Transaction, error) {
+	return _VerifiedCounter.Contract.DebugOutput(&_VerifiedCounter.TransactOpts)
+}
+
+// DebugOutput is a paid mutator transaction binding the contract method 0x6f653d69.
+//
+// Solidity: function debugOutput() returns()
+func (_VerifiedCounter *VerifiedCounterTransactorSession) DebugOutput() (*types.Transaction, error) {
+	return _VerifiedCounter.Contract.DebugOutput(&_VerifiedCounter.TransactOpts)
+}
+
+// DebugReportData is a paid mutator transaction binding the contract method 0x87af66c6.
+//
+// Solidity: function debugReportData() returns()
+func (_VerifiedCounter *VerifiedCounterTransactor) DebugReportData(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _VerifiedCounter.contract.Transact(opts, "debugReportData")
+}
+
+// DebugReportData is a paid mutator transaction binding the contract method 0x87af66c6.
+//
+// Solidity: function debugReportData() returns()
+func (_VerifiedCounter *VerifiedCounterSession) DebugReportData() (*types.Transaction, error) {
+	return _VerifiedCounter.Contract.DebugReportData(&_VerifiedCounter.TransactOpts)
+}
+
+// DebugReportData is a paid mutator transaction binding the contract method 0x87af66c6.
+//
+// Solidity: function debugReportData() returns()
+func (_VerifiedCounter *VerifiedCounterTransactorSession) DebugReportData() (*types.Transaction, error) {
+	return _VerifiedCounter.Contract.DebugReportData(&_VerifiedCounter.TransactOpts)
+}
+
 // Deposit is a paid mutator transaction binding the contract method 0xd0e30db0.
 //
 // Solidity: function deposit() payable returns()
@@ -230,27 +272,6 @@ func (_VerifiedCounter *VerifiedCounterSession) Deposit() (*types.Transaction, e
 // Solidity: function deposit() payable returns()
 func (_VerifiedCounter *VerifiedCounterTransactorSession) Deposit() (*types.Transaction, error) {
 	return _VerifiedCounter.Contract.Deposit(&_VerifiedCounter.TransactOpts)
-}
-
-// Report is a paid mutator transaction binding the contract method 0x2606a10b.
-//
-// Solidity: function report() payable returns()
-func (_VerifiedCounter *VerifiedCounterTransactor) Report(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _VerifiedCounter.contract.Transact(opts, "report")
-}
-
-// Report is a paid mutator transaction binding the contract method 0x2606a10b.
-//
-// Solidity: function report() payable returns()
-func (_VerifiedCounter *VerifiedCounterSession) Report() (*types.Transaction, error) {
-	return _VerifiedCounter.Contract.Report(&_VerifiedCounter.TransactOpts)
-}
-
-// Report is a paid mutator transaction binding the contract method 0x2606a10b.
-//
-// Solidity: function report() payable returns()
-func (_VerifiedCounter *VerifiedCounterTransactorSession) Report() (*types.Transaction, error) {
-	return _VerifiedCounter.Contract.Report(&_VerifiedCounter.TransactOpts)
 }
 
 // SetNumber is a paid mutator transaction binding the contract method 0x3fb5c1cb.
@@ -274,9 +295,9 @@ func (_VerifiedCounter *VerifiedCounterTransactorSession) SetNumber(newNumber *b
 	return _VerifiedCounter.Contract.SetNumber(&_VerifiedCounter.TransactOpts, newNumber)
 }
 
-// VerifiedCounterReportIterator is returned from FilterReport and is used to iterate over the raw logs and unpacked data for Report events raised by the VerifiedCounter contract.
-type VerifiedCounterReportIterator struct {
-	Event *VerifiedCounterReport // Event containing the contract specifics and raw log
+// VerifiedCounterAttestationOutputIterator is returned from FilterAttestationOutput and is used to iterate over the raw logs and unpacked data for AttestationOutput events raised by the VerifiedCounter contract.
+type VerifiedCounterAttestationOutputIterator struct {
+	Event *VerifiedCounterAttestationOutput // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -290,7 +311,7 @@ type VerifiedCounterReportIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *VerifiedCounterReportIterator) Next() bool {
+func (it *VerifiedCounterAttestationOutputIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -299,7 +320,7 @@ func (it *VerifiedCounterReportIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(VerifiedCounterReport)
+			it.Event = new(VerifiedCounterAttestationOutput)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -314,7 +335,7 @@ func (it *VerifiedCounterReportIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(VerifiedCounterReport)
+		it.Event = new(VerifiedCounterAttestationOutput)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -330,41 +351,41 @@ func (it *VerifiedCounterReportIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *VerifiedCounterReportIterator) Error() error {
+func (it *VerifiedCounterAttestationOutputIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *VerifiedCounterReportIterator) Close() error {
+func (it *VerifiedCounterAttestationOutputIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// VerifiedCounterReport represents a Report event raised by the VerifiedCounter contract.
-type VerifiedCounterReport struct {
+// VerifiedCounterAttestationOutput represents a AttestationOutput event raised by the VerifiedCounter contract.
+type VerifiedCounterAttestationOutput struct {
 	Arg0 []byte
 	Raw  types.Log // Blockchain specific contextual infos
 }
 
-// FilterReport is a free log retrieval operation binding the contract event 0x15a6eee4587ae4ff553cd5b3f6f455469ccf6c51070136bd9b7c5c3ec606c9b5.
+// FilterAttestationOutput is a free log retrieval operation binding the contract event 0xa6d91e3236f66e5c4d2e28e3015e484b6ccc47df386fcda20bba7156484a5973.
 //
-// Solidity: event Report(bytes arg0)
-func (_VerifiedCounter *VerifiedCounterFilterer) FilterReport(opts *bind.FilterOpts) (*VerifiedCounterReportIterator, error) {
+// Solidity: event AttestationOutput(bytes arg0)
+func (_VerifiedCounter *VerifiedCounterFilterer) FilterAttestationOutput(opts *bind.FilterOpts) (*VerifiedCounterAttestationOutputIterator, error) {
 
-	logs, sub, err := _VerifiedCounter.contract.FilterLogs(opts, "Report")
+	logs, sub, err := _VerifiedCounter.contract.FilterLogs(opts, "AttestationOutput")
 	if err != nil {
 		return nil, err
 	}
-	return &VerifiedCounterReportIterator{contract: _VerifiedCounter.contract, event: "Report", logs: logs, sub: sub}, nil
+	return &VerifiedCounterAttestationOutputIterator{contract: _VerifiedCounter.contract, event: "AttestationOutput", logs: logs, sub: sub}, nil
 }
 
-// WatchReport is a free log subscription operation binding the contract event 0x15a6eee4587ae4ff553cd5b3f6f455469ccf6c51070136bd9b7c5c3ec606c9b5.
+// WatchAttestationOutput is a free log subscription operation binding the contract event 0xa6d91e3236f66e5c4d2e28e3015e484b6ccc47df386fcda20bba7156484a5973.
 //
-// Solidity: event Report(bytes arg0)
-func (_VerifiedCounter *VerifiedCounterFilterer) WatchReport(opts *bind.WatchOpts, sink chan<- *VerifiedCounterReport) (event.Subscription, error) {
+// Solidity: event AttestationOutput(bytes arg0)
+func (_VerifiedCounter *VerifiedCounterFilterer) WatchAttestationOutput(opts *bind.WatchOpts, sink chan<- *VerifiedCounterAttestationOutput) (event.Subscription, error) {
 
-	logs, sub, err := _VerifiedCounter.contract.WatchLogs(opts, "Report")
+	logs, sub, err := _VerifiedCounter.contract.WatchLogs(opts, "AttestationOutput")
 	if err != nil {
 		return nil, err
 	}
@@ -374,8 +395,8 @@ func (_VerifiedCounter *VerifiedCounterFilterer) WatchReport(opts *bind.WatchOpt
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(VerifiedCounterReport)
-				if err := _VerifiedCounter.contract.UnpackLog(event, "Report", log); err != nil {
+				event := new(VerifiedCounterAttestationOutput)
+				if err := _VerifiedCounter.contract.UnpackLog(event, "AttestationOutput", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -396,12 +417,146 @@ func (_VerifiedCounter *VerifiedCounterFilterer) WatchReport(opts *bind.WatchOpt
 	}), nil
 }
 
-// ParseReport is a log parse operation binding the contract event 0x15a6eee4587ae4ff553cd5b3f6f455469ccf6c51070136bd9b7c5c3ec606c9b5.
+// ParseAttestationOutput is a log parse operation binding the contract event 0xa6d91e3236f66e5c4d2e28e3015e484b6ccc47df386fcda20bba7156484a5973.
 //
-// Solidity: event Report(bytes arg0)
-func (_VerifiedCounter *VerifiedCounterFilterer) ParseReport(log types.Log) (*VerifiedCounterReport, error) {
-	event := new(VerifiedCounterReport)
-	if err := _VerifiedCounter.contract.UnpackLog(event, "Report", log); err != nil {
+// Solidity: event AttestationOutput(bytes arg0)
+func (_VerifiedCounter *VerifiedCounterFilterer) ParseAttestationOutput(log types.Log) (*VerifiedCounterAttestationOutput, error) {
+	event := new(VerifiedCounterAttestationOutput)
+	if err := _VerifiedCounter.contract.UnpackLog(event, "AttestationOutput", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// VerifiedCounterAttestationReportUserDataIterator is returned from FilterAttestationReportUserData and is used to iterate over the raw logs and unpacked data for AttestationReportUserData events raised by the VerifiedCounter contract.
+type VerifiedCounterAttestationReportUserDataIterator struct {
+	Event *VerifiedCounterAttestationReportUserData // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *VerifiedCounterAttestationReportUserDataIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(VerifiedCounterAttestationReportUserData)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(VerifiedCounterAttestationReportUserData)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *VerifiedCounterAttestationReportUserDataIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *VerifiedCounterAttestationReportUserDataIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// VerifiedCounterAttestationReportUserData represents a AttestationReportUserData event raised by the VerifiedCounter contract.
+type VerifiedCounterAttestationReportUserData struct {
+	Arg0 []byte
+	Raw  types.Log // Blockchain specific contextual infos
+}
+
+// FilterAttestationReportUserData is a free log retrieval operation binding the contract event 0xe3d4d34eaf701bee621599ae7f61ad9b8a532ddf28eea8f6f91fc2093a3599d8.
+//
+// Solidity: event AttestationReportUserData(bytes arg0)
+func (_VerifiedCounter *VerifiedCounterFilterer) FilterAttestationReportUserData(opts *bind.FilterOpts) (*VerifiedCounterAttestationReportUserDataIterator, error) {
+
+	logs, sub, err := _VerifiedCounter.contract.FilterLogs(opts, "AttestationReportUserData")
+	if err != nil {
+		return nil, err
+	}
+	return &VerifiedCounterAttestationReportUserDataIterator{contract: _VerifiedCounter.contract, event: "AttestationReportUserData", logs: logs, sub: sub}, nil
+}
+
+// WatchAttestationReportUserData is a free log subscription operation binding the contract event 0xe3d4d34eaf701bee621599ae7f61ad9b8a532ddf28eea8f6f91fc2093a3599d8.
+//
+// Solidity: event AttestationReportUserData(bytes arg0)
+func (_VerifiedCounter *VerifiedCounterFilterer) WatchAttestationReportUserData(opts *bind.WatchOpts, sink chan<- *VerifiedCounterAttestationReportUserData) (event.Subscription, error) {
+
+	logs, sub, err := _VerifiedCounter.contract.WatchLogs(opts, "AttestationReportUserData")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(VerifiedCounterAttestationReportUserData)
+				if err := _VerifiedCounter.contract.UnpackLog(event, "AttestationReportUserData", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAttestationReportUserData is a log parse operation binding the contract event 0xe3d4d34eaf701bee621599ae7f61ad9b8a532ddf28eea8f6f91fc2093a3599d8.
+//
+// Solidity: event AttestationReportUserData(bytes arg0)
+func (_VerifiedCounter *VerifiedCounterFilterer) ParseAttestationReportUserData(log types.Log) (*VerifiedCounterAttestationReportUserData, error) {
+	event := new(VerifiedCounterAttestationReportUserData)
+	if err := _VerifiedCounter.contract.UnpackLog(event, "AttestationReportUserData", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

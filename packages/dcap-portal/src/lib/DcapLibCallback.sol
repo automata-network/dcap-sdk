@@ -15,6 +15,9 @@ abstract contract DcapLibCallback {
     // Error thrown when the version is unknown
     error UNKNOWN_VERSION(uint8); // 0x54b8b896
 
+    error INVALID_BLOCKNUMBER(uint256 current, uint256 got); // 0x63ee230f
+    error INVALID_BLOCKHASH(bytes32 want, bytes32 got, uint256 number); // 0x574645d1
+
     // Initializes the contract with the DCAP portal address
     function __DcapLibCallbackInit(address _dcapPortalAddress) internal {
         dcapPortalAddress = _dcapPortalAddress;
@@ -34,7 +37,7 @@ abstract contract DcapLibCallback {
             magicNumber := calldataload(sub(calldatasize(), 4))
             version := calldataload(sub(calldatasize(), 5))
         }
-        
+
         // Check if the magic number matches the expected value
         if (magicNumber != MAGIC_NUMBER) revert MAGIC_NUMBER_MISMATCH();
 
@@ -91,14 +94,25 @@ abstract contract DcapLibCallback {
         return reportData;
     }
 
+    // this function will make sure the attestation report generated in recent ${maxBlockNumberDiff} blocks
+    function _checkBlockNumber(uint256 blockNumber, bytes32 blockHash, uint256 maxDiff) private view {
+        if (blockNumber >= block.number) {
+            revert INVALID_BLOCKNUMBER(block.number, blockNumber);
+        }
+        if (block.number - blockNumber >= maxDiff) {
+            revert INVALID_BLOCKNUMBER(block.number, blockNumber);
+        }
+        if (blockhash(blockNumber) != blockHash) {
+            revert INVALID_BLOCKHASH(blockhash(blockNumber), blockHash, blockNumber);
+        }
+    }
+
     // Extracts the user data from the output
     function _attestationReportUserDataBytes32() internal pure returns (bytes32, bytes32) {
         return _splitBytes64(_attestationReportUserData());
     }
-    
-    function _splitBytes64(
-        bytes memory b
-    ) internal pure returns (bytes32, bytes32) {
+
+    function _splitBytes64(bytes memory b) internal pure returns (bytes32, bytes32) {
         require(b.length >= 64, "Bytes array too short");
 
         bytes32 x;
@@ -110,6 +124,7 @@ abstract contract DcapLibCallback {
         return (x, y);
     }
     // Modifier to restrict function access to the DCAP portal
+
     modifier fromDcapPortal() {
         if (msg.sender != dcapPortalAddress) {
             revert CALLER_NOT_DCAP_PORTAL();
