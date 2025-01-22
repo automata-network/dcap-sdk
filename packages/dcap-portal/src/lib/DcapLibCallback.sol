@@ -16,6 +16,8 @@ abstract contract DcapLibCallback {
 
     // Error thrown when the caller is not the DCAP portal
     error CALLER_NOT_DCAP_PORTAL(); // 0x41a3344b
+    // Error thrown when the tx.origin not expected
+    error ORIGIN_NOT_ALLOWED(address);
     // Error thrown when the attestation output is invalid
     error INVALID_ATTESTATION_OUTPUT(); // 0xca94db0c
     // Error thrown when the magic number does not match
@@ -32,14 +34,15 @@ abstract contract DcapLibCallback {
     }
 
     // Extracts the attestation output from the calldata
-    // layout(bytes): [output][outputLength:32][version:1][magicNumber:4]
+    // layout(bytes): 
+    //   v1: [output][outputLength:32][sender:20][version:1][magicNumber:4]
     function _attestationOutput() internal pure returns (bytes memory) {
         uint256 totalLen = msg.data.length;
         // Check if the total length of calldata is less than the minimum required length
-        if (totalLen < 32 + 1 + 4) revert INVALID_ATTESTATION_OUTPUT();
+        if (totalLen < 32 + 1 + 4 + 20) revert INVALID_ATTESTATION_OUTPUT();
 
         bytes4 magicNumber;
-        uint8 version;
+        bytes1 version;
         assembly {
             // Load the last 4 bytes of calldata to get the magic number
             magicNumber := calldataload(sub(calldatasize(), 4))
@@ -50,16 +53,17 @@ abstract contract DcapLibCallback {
         if (magicNumber != MAGIC_NUMBER) revert MAGIC_NUMBER_MISMATCH();
 
         // Check the version
-        if (version != 0) revert UNKNOWN_VERSION(version);
+        if (version != 0x01) revert UNKNOWN_VERSION(uint8(version));
 
         uint256 outputLength;
         assembly {
             // Load the length of the attestation output from calldata
-            outputLength := calldataload(sub(calldatasize(), 37))
+            // magicNumber:4, version:1, sender: 20, outputLength: 32
+            outputLength := calldataload(sub(calldatasize(), 57))
         }
 
         // Calculate the starting position of the attestation output in calldata
-        uint256 outputStart = totalLen - 32 - 1 - 4 - outputLength;
+        uint256 outputStart = totalLen - outputLength - 32 - 20 - 1 - 4;
         // Check if the calculated starting position is valid
         if (outputStart > totalLen) revert INVALID_ATTESTATION_OUTPUT();
 
@@ -70,6 +74,29 @@ abstract contract DcapLibCallback {
         }
 
         return outputData;
+    }
+
+    function _portalSender() internal pure returns (address) {
+        bytes4 magicNumber;
+        bytes1 version;
+        assembly {
+            // Load the last 4 bytes of calldata to get the magic number
+            magicNumber := calldataload(sub(calldatasize(), 4))
+            version := calldataload(sub(calldatasize(), 5))
+        }
+
+        // Check if the magic number matches the expected value
+        if (magicNumber != MAGIC_NUMBER) revert MAGIC_NUMBER_MISMATCH();
+
+        // Check the version
+        if (version != 0x01) revert UNKNOWN_VERSION(uint8(version));
+
+        bytes20 sender;
+        assembly {
+            // 4 + 1 + 20
+            sender := calldataload(sub(calldatasize(), 25))
+        }
+        return address(sender);
     }
 
     // Extracts the user data from the output
@@ -131,11 +158,34 @@ abstract contract DcapLibCallback {
         }
         return (x, y);
     }
-    // Modifier to restrict function access to the DCAP portal
 
+    // Modifier to restrict function access to the DCAP portal
     modifier fromDcapPortal() {
         if (msg.sender != dcapPortalAddress) {
             revert CALLER_NOT_DCAP_PORTAL();
+        }
+        _;
+    }
+
+    // Modifier to restrict function access to the DCAP portal and the origin
+    modifier fromDcapPortalAndOrigin(address sender) {
+        if (msg.sender != dcapPortalAddress) {
+            revert CALLER_NOT_DCAP_PORTAL();
+        }
+        if (tx.origin != sender) {
+            revert ORIGIN_NOT_ALLOWED(tx.origin);
+        }
+        _;
+    }
+
+    // Modifier to restrict function access to the DCAP portal and the sender
+    modifier fromDcapPortalAndSender(address sender) {
+        if (msg.sender != dcapPortalAddress) {
+            revert CALLER_NOT_DCAP_PORTAL();
+        }
+        address portalSender = _portalSender();
+        if (portalSender != sender) {
+            revert ORIGIN_NOT_ALLOWED(portalSender);
         }
         _;
     }

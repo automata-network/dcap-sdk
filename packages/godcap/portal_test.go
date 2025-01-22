@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var verifiedCounterAddr = common.HexToAddress("0xcAb8E5A07363bBafC2e964f378a04F5503620C80")
+var verifiedCounterAddr = common.HexToAddress("0xc2FfB783e36c5F4718B96D527d8983222FAF4680")
 
 func TestDcapPortalOnChain(t *testing.T) {
 	defer test.New(t)

@@ -143,8 +143,8 @@ contract DcapPortal is IDcapPortal, UUPSUpgradeable, OwnableUpgradeable {
         if (callback.to == address(this)) {
             revert REJECT_RECURSIVE_CALL();
         }
-        uint8 version = 0;
-        bytes memory paramsWithOutput = abi.encodePacked(callback.params, output, output.length, version, MAGIC_NUMBER);
+        uint8 version = 1;
+        bytes memory paramsWithOutput = abi.encodePacked(callback.params, output, output.length, msg.sender, version, MAGIC_NUMBER);
         (bool success, bytes memory callbackOutput) = callback.to.call{value: callback.value}(paramsWithOutput);
         if (!success) {
             revert CALLBACK_FAILED(callbackOutput);

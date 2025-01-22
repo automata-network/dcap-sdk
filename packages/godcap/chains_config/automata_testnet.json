@@ -5,7 +5,7 @@
     "one_rpc": "https://1rpc.io/ata/testnet",
     "endpoint": "https://rpc-testnet.ata.network",
     "eip1559": true,
-    "dcap_portal": "0x329A946F4138eDB5B5D057a2df3b6a9a6AbAE66E",
+    "dcap_portal": "0xd1426868C112804Dc3293d42Fde0bfF4a26527fC",
     "automata_dcap_attestation_fee": "0x6D67Ae70d99A4CcE500De44628BCB4DaCfc1A145",
     "pccs_router": "0x3095741175094128ae9F451fa3693B2d23719940",
     "v3_quote_verifier": "0x6cc70fDaB6248b374A7fD4930460F7b017190872",

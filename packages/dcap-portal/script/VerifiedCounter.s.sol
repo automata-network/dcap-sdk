@@ -11,7 +11,7 @@ contract VerifiedCounterScript is Script {
 
     function run() public {
         vm.startBroadcast();
-        VerifiedCounter counter = new VerifiedCounter(dcapPortalAddr);
+        VerifiedCounter counter = new VerifiedCounter(dcapPortalAddr, msg.sender);
         vm.stopBroadcast();
         console.log("counter address");
         console.log(address(counter));

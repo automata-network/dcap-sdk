@@ -15,9 +15,11 @@ contract DcapPortalTest is Test {
     DcapPortal public portal;
     VerifiedCounter public counter;
     uint256 public GAS_USED = 7_000_000;
+    address OWNER = 0x45eBb4ef7C6cb57b2dcF092C17f098388637955E;
 
     function setUp() public {
         vm.txGasPrice(1);
+        deal(OWNER, 100 ether);
 
         attestation = new MockDcapAttestation();
         attestation.setBp(10000); // 100% of fee
@@ -31,7 +33,7 @@ contract DcapPortalTest is Test {
         );
         portal = DcapPortal(address(proxy));
 
-        counter = new VerifiedCounter(address(portal));
+        counter = new VerifiedCounter(address(portal), OWNER);
     }
 
     function test_Deposit() public {
@@ -58,6 +60,10 @@ contract DcapPortalTest is Test {
         vm.expectEmit(true, true, true, true);
         emit VerifiedCounter.AttestationOutput(rawQuote);
         callback.params = abi.encodeWithSignature("debugOutput()");
+        portal.verifyAndAttestOnChain{value: GAS_USED}(rawQuote, callback);
+
+        callback.params = abi.encodeWithSignature("checkSender()");
+        vm.prank(OWNER);
         portal.verifyAndAttestOnChain{value: GAS_USED}(rawQuote, callback);
     }
 

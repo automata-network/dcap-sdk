@@ -6,6 +6,7 @@ import {DcapLibCallback} from "@dcap-portal/src/lib/DcapLibCallback.sol";
 
 contract VerifiedCounter is DcapLibCallback {
     uint256 public number;
+    address public owner;
 
     // Event to emit user data from the attestation report
     event AttestationReportUserData(bytes);
@@ -13,8 +14,9 @@ contract VerifiedCounter is DcapLibCallback {
     event AttestationOutput(bytes);
 
     // Constructor to initialize the contract with the DCAP portal address
-    constructor(address _dcapPortalAddress) {
+    constructor(address _dcapPortalAddress, address _owner) {
         __DcapLibCallbackInit(_dcapPortalAddress);
+        owner = _owner;
     }
 
     // Function to set the number, can only be called from the DCAP portal when the attestation is successful
@@ -35,5 +37,9 @@ contract VerifiedCounter is DcapLibCallback {
     // Function to emit a report data, can only be called from the DCAP portal when the attestation is successful
     function debugReportData() public fromDcapPortal {
         emit AttestationReportUserData(_attestationReportUserData());
+    }
+
+    function checkSender() public fromDcapPortalAndSender(owner) {
+
     }
 }
