@@ -16,11 +16,16 @@ type GoDcapExamples struct {
 }
 
 type GoDcapExamplesCheckDcapQuoteOnChain struct {
+	Endpoint string
 }
 
 func (h *GoDcapExamplesCheckDcapQuoteOnChain) FlaglyHandle() error {
 	ctx := context.Background()
-	portal, err := godcap.NewDcapPortal(ctx)
+	opts := []godcap.DcapPortalOption{}
+	if h.Endpoint != "" {
+		opts = append(opts, godcap.WithEndpoint(h.Endpoint))
+	}
+	portal, err := godcap.NewDcapPortal(ctx, opts...)
 	if err != nil {
 		return logex.Trace(err)
 	}
@@ -33,11 +38,16 @@ func (h *GoDcapExamplesCheckDcapQuoteOnChain) FlaglyHandle() error {
 }
 
 type GoDcapExamplesCheckDcapQuoteWithRisc0 struct {
+	Endpoint string
 }
 
 func (h *GoDcapExamplesCheckDcapQuoteWithRisc0) FlaglyHandle() error {
 	ctx := context.Background()
-	portal, err := godcap.NewDcapPortal(ctx)
+	opts := []godcap.DcapPortalOption{}
+	if h.Endpoint != "" {
+		opts = append(opts, godcap.WithEndpoint(h.Endpoint))
+	}
+	portal, err := godcap.NewDcapPortal(ctx, opts...)
 	if err != nil {
 		return logex.Trace(err)
 	}
@@ -54,11 +64,17 @@ func (h *GoDcapExamplesCheckDcapQuoteWithRisc0) FlaglyHandle() error {
 }
 
 type GoDcapExamplesCheckDcapQuoteWithSuccinct struct {
+	Endpoint string
 }
 
 func (h *GoDcapExamplesCheckDcapQuoteWithSuccinct) FlaglyHandle() error {
 	ctx := context.Background()
-	portal, err := godcap.NewDcapPortal(ctx)
+	opts := []godcap.DcapPortalOption{}
+	if h.Endpoint != "" {
+		opts = append(opts, godcap.WithEndpoint(h.Endpoint))
+	}
+	portal, err := godcap.NewDcapPortal(ctx, opts...)
+
 	if err != nil {
 		return logex.Trace(err)
 	}

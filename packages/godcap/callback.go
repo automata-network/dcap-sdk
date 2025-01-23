@@ -41,6 +41,9 @@ func (c *Callback) Abi() (gen.IDcapPortalCallback, error) {
 			Value: new(big.Int),
 		}, nil
 	}
+	if c.raw.Value == nil {
+		c.raw.Value = new(big.Int)
+	}
 	return c.raw, c.err
 }
 
