@@ -277,13 +277,13 @@ func (p *DcapPortal) VerifyAndAttestOnChain(opts *bind.TransactOpts, rawQuote []
 	}
 	feeBase, err := p.EstimateBaseFeeVerifyOnChain(opts.Context, rawQuote)
 	if err != nil {
-		return nil, logex.Trace(p.decodeErr(err))
+		return nil, logex.Trace(p.decodeErr(err, callback))
 	}
 	opts.Value = new(big.Int).Add(p.attestationFee(opts, feeBase), params.Value)
 
 	newTx, err := p.Stub.VerifyAndAttestOnChain(opts, rawQuote, params)
 	if err != nil {
-		return nil, logex.Trace(p.decodeErr(err))
+		return nil, logex.Trace(p.decodeErr(err, callback))
 	}
 	return newTx, nil
 }
@@ -325,13 +325,13 @@ func (p *DcapPortal) VerifyAndAttestWithZKProof(opts *bind.TransactOpts, zkProof
 	}
 	feeBase, err := p.EstimateBaseFeeVerifyAndAttestWithZKProof(opts.Context, zkProof)
 	if err != nil {
-		return nil, logex.Trace(p.decodeErr(err))
+		return nil, logex.Trace(p.decodeErr(err, callback))
 	}
 	opts.Value = new(big.Int).Add(p.attestationFee(opts, feeBase), params.Value)
 
 	newTx, err := p.Stub.VerifyAndAttestWithZKProof(opts, zkProof.Output, uint8(zkProof.Type), zkProof.Proof, params)
 	if err != nil {
-		return nil, logex.Trace(p.decodeErr(err))
+		return nil, logex.Trace(p.decodeErr(err, callback))
 	}
 	return newTx, nil
 }
@@ -443,7 +443,7 @@ func (p *DcapPortal) callContract(ctx context.Context, abi *abi.ABI, method stri
 	}
 	data, err := p.client.CallContract(ctx, msg, nil)
 	if err != nil {
-		return nil, logex.Trace(p.decodeErr(err))
+		return nil, logex.Trace(p.decodeErr(err, nil))
 	}
 	result, err := abi.Unpack(method, data)
 	if err != nil {
@@ -454,12 +454,12 @@ func (p *DcapPortal) callContract(ctx context.Context, abi *abi.ABI, method stri
 
 // decodeErrData decodes error data from a contract call
 // Returns a formatted error message
-func (p *DcapPortal) decodeErrData(msg string, dataBytes []byte) error {
+func (p *DcapPortal) decodeErrData(abi *abi.ABI, msg string, dataBytes []byte, callback *Callback) error {
 	sig := dataBytes
 	if len(sig) > 4 {
 		sig = sig[:4]
 	}
-	for name, er := range p.abi.Errors {
+	for name, er := range abi.Errors {
 		if bytes.Equal(er.ID[:4], sig) {
 			args, _ := er.Inputs.Unpack(dataBytes[len(sig):])
 			for idx := range args {
@@ -468,7 +468,10 @@ func (p *DcapPortal) decodeErrData(msg string, dataBytes []byte) error {
 				}
 			}
 			if name == "CALLBACK_FAILED" {
-				return logex.Trace(p.decodeErrData(msg, args[0].(hexutil.Bytes)), "callbackFailed")
+				if callback != nil {
+					return logex.Trace(p.decodeErrData(&callback.abi, msg, args[0].(hexutil.Bytes), nil), "callbackFailed")
+				}
+				return logex.Trace(p.decodeErrData(abi, msg, args[0].(hexutil.Bytes), nil), "callbackFailed")
 			}
 			return logex.NewErrorf("%v: %v(%v)", msg, name, args)
 		}
@@ -478,7 +481,7 @@ func (p *DcapPortal) decodeErrData(msg string, dataBytes []byte) error {
 
 // decodeErr decodes a JSON error from a contract call
 // Returns a formatted error message
-func (p *DcapPortal) decodeErr(err error) error {
+func (p *DcapPortal) decodeErr(err error, callback *Callback) error {
 	if err == nil {
 		return nil
 	}
@@ -497,7 +500,7 @@ func (p *DcapPortal) decodeErr(err error) error {
 	}
 	dataBytes, er := hex.DecodeString(strings.TrimPrefix(data, "0x"))
 	if er == nil {
-		return p.decodeErrData(jerr.Error(), dataBytes)
+		return p.decodeErrData(&p.abi, jerr.Error(), dataBytes, callback)
 	}
 	return logex.NewErrorf("%v: %v", jerr.Error(), data)
 
