@@ -53,10 +53,10 @@ func (c *Config) Init() error {
 		c.Rpc = os.Getenv("PROVER_NETWORK_RPC")
 	}
 	if c.Rpc == "" {
-		c.Rpc = "https://rpc.succinct.xyz/"
+		c.Rpc = "https://rpc.production.succinct.xyz/"
 	}
 	if c.PrivateKey == "" {
-		c.PrivateKey = os.Getenv("SP1_PRIVATE_KEY")
+		c.PrivateKey = os.Getenv("NETWORK_PRIVATE_KEY")
 	}
 	if c.TimeoutSecs == 0 {
 		c.TimeoutSecs = 30
@@ -65,7 +65,7 @@ func (c *Config) Init() error {
 		c.PollIntervalSecs = 5
 	}
 	if c.Version == "" {
-		c.Version = "v3.0.0"
+		c.Version = "v4.0.0-rc.3"
 	}
 	return nil
 }

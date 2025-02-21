@@ -98,7 +98,7 @@ func (c *ZkProofClient) ProveQuote(ctx context.Context, ty ZkType, quote []byte,
 		proof.Proof = bonsai.Groth16Encode([]byte(proveInfo.Receipt.Inner.Groth16.Seal))
 	case ZkTypeSuccinct:
 		if c.Sp1 == nil {
-			return nil, logex.NewError("SP1_PRIVATE_KEY is required")
+			return nil, logex.NewError("NETWORK_PRIVATE_KEY is required")
 		}
 
 		// Generate input for SP1 proof

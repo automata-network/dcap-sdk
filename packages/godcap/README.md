@@ -166,8 +166,8 @@ func VerifyWithRisc0ZkProof(ctx context.Context, quote []byte, privateKeyStr str
 ```go
 
 //
-// Make sure you export the Succinct private key to SP1_PRIVATE_KEY
-//   export SP1_PRIVATE_KEY=${KEY}
+// Make sure you export the Succinct private key to NETWORK_PRIVATE_KEY
+//   export NETWORK_PRIVATE_KEY=${KEY}
 
 func VerifyWithSuccinctZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
