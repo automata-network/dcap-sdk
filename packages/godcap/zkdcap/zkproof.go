@@ -104,7 +104,7 @@ func (c *ZkProofClient) ProveQuote(ctx context.Context, ty ZkType, quote []byte,
 		// Generate input for SP1 proof
 		stdin := sp1.NewSP1StdinFromInput(Sp1GenerateInput(quote, collateral))
 		// Generate SP1 proof
-		res, err := c.Sp1.Prove(ctx, SUCCINCT_ZKVM_ELF, stdin)
+		res, err := c.Sp1.Prove(ctx, stdin)
 		if err != nil {
 			return nil, logex.Trace(err)
 		}

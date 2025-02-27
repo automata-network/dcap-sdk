@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/automata-network/dcap-sdk/packages/godcap/bincode"
+	"github.com/automata-network/dcap-sdk/packages/godcap/sp1/sp1_proto"
 	"github.com/chzyer/logex"
+	"google.golang.org/protobuf/proto"
 )
 
 // GetNonceRequest represents a request to get the nonce for an account.
@@ -26,8 +28,8 @@ type GetNonceResponse struct {
 // RpcGetNonce retrieves the nonce for the client's public address.
 func (c *Client) RpcGetNonce(ctx context.Context) (uint64, error) {
 	addr := c.Public()
-	var res GetNonceResponse
-	if err := c.api("GetNonce", &GetNonceRequest{Address: addr[:]}, &res); err != nil {
+	res, err := c.conn.GetNonce(ctx, &sp1_proto.GetNonceRequest{Address: addr[:]})
+	if err != nil {
 		return 0, logex.Trace(err)
 	}
 	return res.Nonce, nil
@@ -57,68 +59,33 @@ type CreateProofResponse struct {
 	StdinUrl string `json:"stdin_url"`
 }
 
-// RpcCreateProof creates a proof with the given parameters.
-func (c *Client) RpcCreateProof(ctx context.Context, nonce uint64, deadline uint64, mode ProofMode) (*CreateProofResponse, error) {
-	sig, err := c.auth.SignMessage(&CreateProofMsg{
-		Nonce:    nonce,
-		Deadline: deadline,
-		Mode:     uint32(mode),
-		Version:  c.cfg.Version,
+func (c *Client) CreateArtifact(ctx context.Context, aty sp1_proto.ArtifactType, content []byte) (string, error) {
+	sig, err := EIP191SignHash(c.auth.key, []byte("create_artifact"))
+	if err != nil {
+		return "", logex.Trace(err)
+	}
+	rsp, err := c.artifact.CreateArtifact(ctx, &sp1_proto.CreateArtifactRequest{
+		Signature:    sig,
+		ArtifactType: aty,
 	})
-
 	if err != nil {
-		return nil, logex.Trace(err)
+		return "", logex.Trace(err)
 	}
-	var res CreateProofResponse
-	if err := c.api("CreateProof", &CreateProofRequest{
-		Signature:      sig,
-		Nonce:          nonce,
-		Deadline:       uint64(deadline),
-		Mode:           uint32(mode),
-		CircuitVersion: c.cfg.Version,
-	}, &res); err != nil {
-		return nil, logex.Trace(err)
-	}
-	return &res, nil
-}
-
-// SubmitProofRequest represents a request to submit a proof.
-type SubmitProofRequest struct {
-	/// The signature of the message.
-	Signature []byte `json:"signature"`
-	/// The nonce for the account.
-	Nonce uint64 `json:"nonce,string"`
-	/// The proof identifier.
-	ProofId string `json:"proof_id"`
-}
-
-// SubmitProofResponse represents the response for submitting a proof, empty on success.
-type SubmitProofResponse struct{}
-
-// RpcSubmitProof submits the proof with the given nonce and proof ID.
-func (c *Client) RpcSubmitProof(ctx context.Context, nonce uint64, proofId string) error {
-	var submitRes SubmitProofResponse
-	sig, err := c.auth.SignMessage(&SubmitProofMsg{Nonce: nonce, ProofId: proofId})
+	resp, err := c.s3(http.MethodPut, rsp.ArtifactPresignedUrl, bytes.NewReader(content))
 	if err != nil {
-		return logex.Trace(err)
+		return "", logex.Trace(err)
 	}
-	if err := c.api("SubmitProof", &SubmitProofRequest{
-		Signature: sig,
-		Nonce:     nonce,
-		ProofId:   proofId,
-	}, &submitRes); err != nil {
-		return logex.Trace(err)
-	}
-	return nil
+	_ = resp
+	return rsp.ArtifactUri, nil
 }
 
 // Prove creates and submits a proof, then polls for the proof status.
-func (c *Client) Prove(ctx context.Context, elf []byte, stdin *SP1Stdin) (*SP1ProofWithPublicValues, error) {
-	proofId, err := c.CreateProof(ctx, elf, stdin, ProofModeGroth16)
+func (c *Client) Prove(ctx context.Context, stdin *SP1Stdin) (*SP1ProofWithPublicValues, error) {
+	requestId, err := c.CreateProof(ctx, stdin, sp1_proto.ProofMode_Groth16)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	proof, err := c.PollProof(ctx, proofId, time.Duration(c.cfg.PollIntervalSecs)*time.Second)
+	proof, err := c.PollProof(ctx, requestId, time.Duration(c.cfg.PollIntervalSecs)*time.Second)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -126,36 +93,44 @@ func (c *Client) Prove(ctx context.Context, elf []byte, stdin *SP1Stdin) (*SP1Pr
 }
 
 // CreateProof creates a proof and uploads the necessary files.
-func (c *Client) CreateProof(ctx context.Context, elf []byte, stdin *SP1Stdin, mode ProofMode) (string, error) {
+func (c *Client) CreateProof(ctx context.Context, stdin *SP1Stdin, mode sp1_proto.ProofMode) ([]byte, error) {
 	nonce, err := c.RpcGetNonce(ctx)
 	if err != nil {
-		return "", logex.Trace(err)
+		return nil, logex.Trace(err)
 	}
 	logex.Infof("account=%v, nonce: %v", c.Public(), nonce)
-	now := time.Now().Add(10 * time.Second).Unix()
-	createProofRes, err := c.RpcCreateProof(ctx, nonce, uint64(now), mode)
-	if err != nil {
-		return "", logex.Trace(err)
-	}
 
-	elfBytes := bincode.Bytes(elf).Bincode()
-	logex.Infof("upload program: %v", len(elfBytes))
-	if _, err := c.s3(http.MethodPut, createProofRes.ProgramUrl, bytes.NewReader(elfBytes)); err != nil {
-		return "", logex.Trace(err)
-	}
-	logex.Infof("upload stdin: %v", len(stdin.Bincode()))
-	if _, err := c.s3(http.MethodPut, createProofRes.StdinUrl, bytes.NewReader(stdin.Bincode())); err != nil {
-		return "", logex.Trace(err)
-	}
-	nonce, err = c.RpcGetNonce(ctx)
+	stdinUrl, err := c.CreateArtifact(ctx, sp1_proto.ArtifactType_Stdin, stdin.Bincode())
 	if err != nil {
-		return "", logex.Trace(err)
+		return nil, logex.Trace(err)
 	}
-	logex.Infof("account=%v, nonce: %v", c.Public(), nonce)
-	if err := c.RpcSubmitProof(ctx, nonce, createProofRes.ProofId); err != nil {
-		return "", logex.Trace(err)
+	reqBody := &sp1_proto.RequestProofRequestBody{
+		Nonce:      nonce,
+		Version:    fmt.Sprintf("sp1-%v", c.cfg.Version),
+		VkHash:     c.VkHash[:],
+		Mode:       mode,
+		Strategy:   c.cfg.Strategy,
+		StdinUri:   stdinUrl,
+		Deadline:   uint64(time.Now().Unix()) + c.cfg.Timeout,
+		CycleLimit: c.cfg.CycleLimit,
 	}
-	return createProofRes.ProofId, nil
+	reqBodyMsg, err := proto.Marshal(reqBody)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	reqSig, err := EIP191SignHash(c.auth.key, reqBodyMsg)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	response, err := c.conn.RequestProof(ctx, &sp1_proto.RequestProofRequest{
+		Format:    sp1_proto.MessageFormat_Binary,
+		Signature: reqSig,
+		Body:      reqBody,
+	})
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	return response.Body.RequestId, nil
 }
 
 // GetProofStatusRequest represents a request to get the status of a proof.
@@ -177,18 +152,18 @@ type GetProofStatusResponse struct {
 }
 
 // RpcGetProofStatus retrieves the status of the proof with the given proof ID.
-func (c *Client) RpcGetProofStatus(ctx context.Context, proofId string) (*GetProofStatusResponse, error) {
-	var res GetProofStatusResponse
-	if err := c.api("GetProofStatus", &GetProofStatusRequest{ProofId: proofId}, &res); err != nil {
+func (c *Client) RpcGetProofStatus(ctx context.Context, requestId []byte) (*sp1_proto.GetProofRequestStatusResponse, error) {
+	res, err := c.conn.GetProofRequestStatus(ctx, &sp1_proto.GetProofRequestStatusRequest{RequestId: requestId})
+	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	return &res, nil
+	return res, nil
 }
 
 // SP1ProofWithPublicValues represents a proof along with its public values.
 type SP1ProofWithPublicValues struct {
-	Proof        SP1Proof
-	Stdin        SP1Stdin
+	Proof SP1Proof
+	// Stdin        SP1Stdin
 	PublicValues SP1PublicValues
 	Sp1Version   bincode.String
 }
@@ -218,17 +193,13 @@ func (p *SP1ProofWithPublicValues) New() bincode.FromBin {
 
 // String returns a string representation of SP1ProofWithPublicValues.
 func (p *SP1ProofWithPublicValues) String() string {
-	return fmt.Sprintf("SP1ProofWithPublicValues{proof: %v, stdin: %v, public_values: %v, sp1_version: %v}", p.Proof.String(), p.Stdin.String(), p.PublicValues.String(), p.Sp1Version.String())
+	return fmt.Sprintf("SP1ProofWithPublicValues{proof: %v, public_values: %v, sp1_version: %v}", p.Proof.String(), p.PublicValues.String(), p.Sp1Version.String())
 }
 
 // FromBin deserializes the proof with public values from bytes.
 func (p *SP1ProofWithPublicValues) FromBin(data []byte) ([]byte, error) {
 	var err error
 	data, err = p.Proof.FromBin(data)
-	if err != nil {
-		return nil, logex.Trace(err)
-	}
-	data, err = p.Stdin.FromBin(data)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -342,7 +313,7 @@ func (v *SP1PublicValues) FromBin(data []byte) ([]byte, error) {
 }
 
 // PollProof polls the status of the proof until it is fulfilled or an error occurs.
-func (c *Client) PollProof(ctx context.Context, proofId string, interval time.Duration) (*SP1ProofWithPublicValues, error) {
+func (c *Client) PollProof(ctx context.Context, requestId []byte, interval time.Duration) (*SP1ProofWithPublicValues, error) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	errRetryTime := 3
@@ -352,7 +323,7 @@ func (c *Client) PollProof(ctx context.Context, proofId string, interval time.Du
 		case <-ctx.Done():
 			return nil, logex.Trace(ctx.Err())
 		case <-ticker.C:
-			status, err := c.RpcGetProofStatus(ctx, proofId)
+			status, err := c.RpcGetProofStatus(ctx, requestId)
 			if err != nil {
 				if errRetryTime == 0 {
 					return nil, logex.Trace(err)
@@ -361,12 +332,12 @@ func (c *Client) PollProof(ctx context.Context, proofId string, interval time.Du
 				errRetryTime--
 				continue
 			}
-			switch status.Status {
-			case "PROOF_FULFILLED":
-				if status.ProofUrl == "" {
+			switch status.FulfillmentStatus {
+			case sp1_proto.FulfillmentStatus_Fulfilled:
+				if status.ProofUri == nil {
 					return nil, logex.NewErrorf("missing receipt: %v", status)
 				}
-				proofBytes, err := c.s3(http.MethodGet, status.ProofUrl, nil)
+				proofBytes, err := c.s3(http.MethodGet, *status.ProofUri, nil)
 				if err != nil {
 					return nil, logex.Trace(err)
 				}
@@ -375,19 +346,18 @@ func (c *Client) PollProof(ctx context.Context, proofId string, interval time.Du
 					return nil, logex.Trace(err)
 				}
 				return res, nil
-			case "PROOF_CLAIMED":
+			case sp1_proto.FulfillmentStatus_Assigned:
 				if !isClaimed {
-					logex.Info("Proof request claimed, proving...")
+					logex.Infof("Proof request assigned, requestId=%x", requestId)
 					isClaimed = true
 				}
-			case "PROOF_UNCLAIMED":
+			case sp1_proto.FulfillmentStatus_Unfulfillable:
 				return nil, logex.NewErrorf(
-					"Proof generation failed: [%v] %v",
-					status.UnclaimReason,
-					status.UnclaimDescription,
+					"Proof generation failed: %v",
+					status,
 				)
 			default:
-				logex.Infof("Session %v is running: %v", proofId, status.Status)
+				logex.Infof("requestId %x is running: %v", requestId, status)
 			}
 		}
 	}

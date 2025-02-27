@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-//go:embed riscv32im-succinct-zkvm-elf
-var SUCCINCT_ZKVM_ELF []byte
-
 func Sp1GenerateInput(quote []byte, collateral *Collateral) []byte {
 	collateralBytes := collateral.Encode()
 	currentTime := uint64(time.Now().Unix())
