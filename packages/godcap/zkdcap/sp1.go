@@ -4,7 +4,11 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
+
+var SP1_PROGRAM_VKHASH = common.HexToHash("0x004be684aaf90b70fb2d8f586ec96c36cee5f6533850b14e8b5568f4dbf31f8e")
 
 func Sp1GenerateInput(quote []byte, collateral *Collateral) []byte {
 	collateralBytes := collateral.Encode()

@@ -12,6 +12,7 @@ import (
 	"github.com/automata-network/dcap-sdk/packages/godcap/bincode"
 	"github.com/automata-network/dcap-sdk/packages/godcap/sp1/sp1_proto"
 	"github.com/chzyer/logex"
+	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -80,8 +81,8 @@ func (c *Client) CreateArtifact(ctx context.Context, aty sp1_proto.ArtifactType,
 }
 
 // Prove creates and submits a proof, then polls for the proof status.
-func (c *Client) Prove(ctx context.Context, stdin *SP1Stdin) (*SP1ProofWithPublicValues, error) {
-	requestId, err := c.CreateProof(ctx, stdin, sp1_proto.ProofMode_Groth16)
+func (c *Client) Prove(ctx context.Context, programVkHash common.Hash, stdin *SP1Stdin) (*SP1ProofWithPublicValues, error) {
+	requestId, err := c.CreateProof(ctx, programVkHash, stdin, sp1_proto.ProofMode_Groth16)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -93,7 +94,7 @@ func (c *Client) Prove(ctx context.Context, stdin *SP1Stdin) (*SP1ProofWithPubli
 }
 
 // CreateProof creates a proof and uploads the necessary files.
-func (c *Client) CreateProof(ctx context.Context, stdin *SP1Stdin, mode sp1_proto.ProofMode) ([]byte, error) {
+func (c *Client) CreateProof(ctx context.Context, programVkHash common.Hash, stdin *SP1Stdin, mode sp1_proto.ProofMode) ([]byte, error) {
 	nonce, err := c.RpcGetNonce(ctx)
 	if err != nil {
 		return nil, logex.Trace(err)
@@ -107,7 +108,7 @@ func (c *Client) CreateProof(ctx context.Context, stdin *SP1Stdin, mode sp1_prot
 	reqBody := &sp1_proto.RequestProofRequestBody{
 		Nonce:      nonce,
 		Version:    fmt.Sprintf("sp1-%v", c.cfg.Version),
-		VkHash:     c.VkHash[:],
+		VkHash:     programVkHash[:],
 		Mode:       mode,
 		Strategy:   c.cfg.Strategy,
 		StdinUri:   stdinUrl,
@@ -133,24 +134,6 @@ func (c *Client) CreateProof(ctx context.Context, stdin *SP1Stdin, mode sp1_prot
 	return response.Body.RequestId, nil
 }
 
-// GetProofStatusRequest represents a request to get the status of a proof.
-type GetProofStatusRequest struct {
-	ProofId string `json:"proof_id"`
-}
-
-// GetProofStatusResponse represents the response containing the proof status.
-type GetProofStatusResponse struct {
-	/// The status of the proof request.
-	Status string `json:"status"`
-	/// Optional proof URL, where you can download the result of the proof request. Only included if
-	/// the proof has been fulfilled.
-	ProofUrl string `json:"proof_url"`
-	/// If the proof was unclaimed, the reason why.
-	UnclaimReason string `json:"unclaim_reason"`
-	/// If the proof was unclaimed, the description detailing why.
-	UnclaimDescription string `json:"unclaim_description"`
-}
-
 // RpcGetProofStatus retrieves the status of the proof with the given proof ID.
 func (c *Client) RpcGetProofStatus(ctx context.Context, requestId []byte) (*sp1_proto.GetProofRequestStatusResponse, error) {
 	res, err := c.conn.GetProofRequestStatus(ctx, &sp1_proto.GetProofRequestStatusRequest{RequestId: requestId})
@@ -162,8 +145,7 @@ func (c *Client) RpcGetProofStatus(ctx context.Context, requestId []byte) (*sp1_
 
 // SP1ProofWithPublicValues represents a proof along with its public values.
 type SP1ProofWithPublicValues struct {
-	Proof SP1Proof
-	// Stdin        SP1Stdin
+	Proof        SP1Proof
 	PublicValues SP1PublicValues
 	Sp1Version   bincode.String
 }

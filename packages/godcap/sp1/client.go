@@ -81,7 +81,6 @@ type Client struct {
 	conn     sp1_proto.ProverNetworkClient
 	artifact sp1_proto.ArtifactStoreClient
 	auth     *EIP712Auth
-	VkHash   common.Hash
 }
 
 func NewClient(cfg *Config) (*Client, error) {
@@ -105,7 +104,6 @@ func NewClient(cfg *Config) (*Client, error) {
 		conn:     grpcClient,
 		artifact: artifact,
 		auth:     NewEIP712Auth(key),
-		VkHash:   common.HexToHash("0x004be684aaf90b70fb2d8f586ec96c36cee5f6533850b14e8b5568f4dbf31f8e"),
 	}
 	return client, nil
 }
