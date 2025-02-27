@@ -8,6 +8,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// How to calculate the vkhash
+//
+// ```rust
+//
+//	let private_key = env::var("NETWORK_PRIVATE_KEY").unwrap();
+//	let rpc_url = "https://rpc.production.succinct.xyz";
+//	let client = NetworkProver::new(&private_key, rpc_url);
+//	let hash = client.register_program(&vk, DCAP_ELF).await;
+//	println!("{:?}", hash);
+//
+// ```
 var SP1_PROGRAM_VKHASH = common.HexToHash("0x004be684aaf90b70fb2d8f586ec96c36cee5f6533850b14e8b5568f4dbf31f8e")
 
 func Sp1GenerateInput(quote []byte, collateral *Collateral) []byte {
