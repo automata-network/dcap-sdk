@@ -7,42 +7,50 @@
 </div>
 
 # Go DCAP
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Go SDK for interacting with [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation)
-
-# Workflow
-
-```mermaid
-sequenceDiagram
-  autonumber
-    participant U as User
-    participant P as Portal
-    participant A as DCAP Attestation
-    participant C as User Contract
-    
-note over U: Generate attestation report
-U->>+P: Send Attestation Report
-P->>A: Verify Attestation Report
-alt Verification Passed
-	P->>+C: Callback
-    note over C: Check from portal
-    note over C: Extract Attestation Output
-    C->>-P: Done
-	P->>U: Done
-else
-	P->>-U: error VERIFICATION_FAILED()
-end
-```
+With Go DCAP, you can request ZK proofs of a quote verification from ZK Prover Network, then verify directly on-chain in native Go.
 
 # Features
 
-* Automatically calculate the fee of the attestation verification
-* Generate ZkProof through Remote Prover Network
-* Submit via ZkProof or Attestation Report
-* [WIP] Generate Attestation Report
+Go DCAP currently provides the following main features:
+
+* Provides a fee estimate on quote / zk proof verification:
+
+Use either:
+
+`Portal.EstimateBaseFeeVerifyOnChain` to estimate the fee to verify quotes fully on-chain 
+
+**OR**
+
+`Portal.EstimateBaseFeeVerifyAndAttestWithZKProof` to estimate the fee to verify ZK Proof of the Quote Verification executed in a zkVM.
+
+* Generates ZkProof from a Remote Prover Network
+
+Currently integrates both RiscZero Bonsai and Succinct SP1 Remote Prover Networks.
+
+Use `Portal.GenerateZkProof` to fetch proofs. To specify the zkVM, pass either `zkdcap.ZkTypeRiscZero` or `zkdcap.ZkTypeSuccinct`.
+
+* ABI Encoder for user-defined Solidity function
+
+The `Callback` object is a required argument for either verification methods to allow `DCAP Portal` to perform a callback on the user contract after a successful DCAP Quote / ZK Proof verification. The calldata must be explicitly provided in the `Callback` object. 
+
+Use the `NewCallbackFromAbiJSON` function to generate the ABI-encoded calldata.
+
+* Invoke the `verifyAndAttestOnChain()` or `verifyAndAttestWithZKProof` contract methods natively in GO
+
+Use either:
+
+`Portal.VerifyAndAttestOnChain` to verify DCAP quotes fully on-chain.
+
+**OR**
+
+`Portal.VerifyAndAttestWithZKProof`to verify ZK Proof of a given DCAP attestation.
 
 # Usage
+
+Simplified snippet to show how you can integrate your code with Go DCAP.
 
 ```go
 func main() {
@@ -52,6 +60,12 @@ func main() {
         godcap.WithPrivateKey(privateKeyStr),
     )
     // error handling
+
+    // generate the callback
+    callback := NewCallbackFromAbiJSON(ContractABI).
+        .WithParams("functionName", param1, param2, ...)
+        .WithTo(contractAddress)
+        .WithValue(wei)
 
     var tx *types.Transaction
 
@@ -67,7 +81,7 @@ func main() {
     }
 
     // Option2: verify on chain
-    {
+    {   
         tx, err = portal.VerifyAndAttestOnChain(nil, quote, callback)
         // error handling
     }
@@ -80,7 +94,7 @@ func main() {
 
 # Examples
 
-Note: VerifiedCounter can be referenced [here](../dcap-portal/src/examples/VerifiedCounter.sol)
+Note: `VerifiedCounter` can be found [here](../dcap-portal/src/examples/VerifiedCounter.sol)
 
 <details>
 <summary>Verify on chain</summary>
@@ -205,4 +219,4 @@ func VerifyWithSuccinctZkProof(ctx context.Context, quote []byte, privateKeyStr 
 
 </details>
 
-For more examples can check from [here](cmd/godcap/examples.go)
+Find more examples [here](cmd/godcap/examples.go)

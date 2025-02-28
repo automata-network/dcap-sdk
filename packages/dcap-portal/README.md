@@ -9,9 +9,9 @@
 ## DCAP Portal
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-The DCAP Portal Contract is user-facing, that submits DCAP quotes or (SNARK proofs) on the user's behalf to the [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation) contract.
+The DCAP Portal Contract is user-facing, and seamlessly submits DCAP quotes or (SNARK proofs) on the user's behalf to the [Automata DCAP attestation](http://github.com/automata-network/automata-dcap-attestation) contract.
 
-Upon successful verification of quotes, the Portal performs a callback to the user contract with the provided calldata.
+Upon successful verification of a quote, the Portal performs a callback to the user contract with the provided calldata.
 
 To begin building with DCAP Portal, the following dependencies must be installed on your machine:
 
@@ -33,7 +33,7 @@ U->>+P: Sends DCAP Quote
 P->>A: Verifies DCAP Quote
 alt Verification Passed
 	P->>+C: Callback
-    note over C: Checks function call must be from the DCAP Portal contract address
+    note over C: Checks whether function call is coming from the DCAP Portal contract address
     note over C: Extracts the Attestation Output Data
     C->>-P: Done
 	P->>U: Done
@@ -43,10 +43,10 @@ end
 ```
 
 1. The user generates an Intel DCAP Quote, which they can either:
-  a. Sends it directly to the Portal contract, via `verifyAndAttestOnChain()`.
-  b. Performs quote verificationn with zkVM Program executed either via RiscZero or SP1, a SNARK proof and the execution output are then sent to the contract via `verifyAndAttestWithZKProof`
+  (a) Sends it directly to the Portal contract, via `verifyAndAttestOnChain()` or
+  (b) Performs quote verificationn with zkVM Program executed either via RiscZero or SP1, a SNARK proof and the execution output are then sent to the contract via `verifyAndAttestWithZKProof`.
 
-Regardless of which function methods the user invokes, they also must specify the [`Callback`](./src/interfaces/IDcapPortal.sol) parameters.
+  Regardless of which method the user invokes, they must specify the [`Callback`](./src/interfaces/IDcapPortal.sol) parameters.
 
 2. The Portal forwards either (a) the DCAP quote for full on-chain verification or (b) SNARK proofs and the execution output to the Automata DCAP Attestation contract. Upon successful verification, the Attestation Output is returned to the Portal.
 
@@ -98,4 +98,12 @@ contract VerifiedCounter is DcapLibCallback {
     }
 }
 ```
-The `fromDcapPortal` modifier ensures that the `number` value can only be changed after successful verification of the DCAP quote.
+The `fromDcapPortal()` modifier ensures that the `number` value can only be changed after successful verification of the DCAP quote.
+
+There are stricter modifiers available as well, that you may either require:
+
+- A specific caller to the `DcapPortal` with `fromDcapPortalAndSender()`
+
+OR
+
+- A specific `tx.origin` with `fromDcapPortalAndOrigin()`
