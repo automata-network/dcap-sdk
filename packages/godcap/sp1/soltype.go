@@ -116,3 +116,13 @@ func (a *EIP712Auth) SigningHash(typedData *apitypes.TypedData) (common.Hash, er
 
 	return sighash, nil
 }
+
+func EIP191SignHashMsg(data []byte) common.Hash {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	return crypto.Keccak256Hash([]byte(msg))
+}
+
+func EIP191SignHash(prvKey *ecdsa.PrivateKey, data []byte) (sig []byte, err error) {
+	msg := EIP191SignHashMsg(data)
+	return crypto.Sign(msg[:], prvKey)
+}

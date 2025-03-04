@@ -8,8 +8,8 @@
     "dcap_portal": "0xd1426868C112804Dc3293d42Fde0bfF4a26527fC",
     "automata_dcap_attestation_fee": "0x6D67Ae70d99A4CcE500De44628BCB4DaCfc1A145",
     "pccs_router": "0x3095741175094128ae9F451fa3693B2d23719940",
-    "v3_quote_verifier": "0x6cc70fDaB6248b374A7fD4930460F7b017190872",
-    "v4_quote_verifier": "0x015E89a5fF935Fbc361DcB4Bac71e5cD8a5CeEe3",
+    "v3_quote_verifier": "0x03F3082cC6521179b30Bccf92561ea0576931Ffc",
+    "v4_quote_verifier": "0x72221D7D8eB8949383404B1d1027E5eBd39fE53C",
     "explorer": "https://explorer-testnet.ata.network",
     "pccs": {
         "automata_fmspc_tcb_dao": "0x9c54C72867b07caF2e6255CE32983c28aFE40F26",

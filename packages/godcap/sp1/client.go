@@ -1,26 +1,19 @@
 package sp1
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
+	"github.com/automata-network/dcap-sdk/packages/godcap/sp1/sp1_proto"
 	"github.com/chzyer/logex"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-)
-
-type ProofMode uint8
-
-const (
-	ProofModeUnspecified ProofMode = iota
-	ProofModeCore
-	ProofModeCompressed
-	ProofModePlonk
-	ProofModeGroth16
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type ProofStatus uint32
@@ -46,6 +39,10 @@ type Config struct {
 	TimeoutSecs      int    `json:"timeout_secs"`
 	PollIntervalSecs int    `json:"poll_interval_secs"`
 	Version          string `json:"version"`
+	CycleLimit       uint64 `json:"cycle_limit"`
+	Timeout          uint64 `json:"timeout"`
+
+	Strategy sp1_proto.FulfillmentStrategy `json:"strategy"`
 }
 
 func (c *Config) Init() error {
@@ -53,10 +50,10 @@ func (c *Config) Init() error {
 		c.Rpc = os.Getenv("PROVER_NETWORK_RPC")
 	}
 	if c.Rpc == "" {
-		c.Rpc = "https://rpc.succinct.xyz/"
+		c.Rpc = "https://rpc.production.succinct.xyz/"
 	}
 	if c.PrivateKey == "" {
-		c.PrivateKey = os.Getenv("SP1_PRIVATE_KEY")
+		c.PrivateKey = os.Getenv("NETWORK_PRIVATE_KEY")
 	}
 	if c.TimeoutSecs == 0 {
 		c.TimeoutSecs = 30
@@ -65,14 +62,25 @@ func (c *Config) Init() error {
 		c.PollIntervalSecs = 5
 	}
 	if c.Version == "" {
-		c.Version = "v3.0.0"
+		c.Version = "v4.0.0-rc.3"
+	}
+	if c.CycleLimit == 0 {
+		c.CycleLimit = 150_000_000
+	}
+	if c.Timeout == 0 {
+		c.Timeout = 14400
+	}
+	if c.Strategy == sp1_proto.FulfillmentStrategy_UnspecifiedFulfillmentStrategy {
+		c.Strategy = sp1_proto.FulfillmentStrategy_Hosted
 	}
 	return nil
 }
 
 type Client struct {
-	cfg  *Config
-	auth *EIP712Auth
+	cfg      *Config
+	conn     sp1_proto.ProverNetworkClient
+	artifact sp1_proto.ArtifactStoreClient
+	auth     *EIP712Auth
 }
 
 func NewClient(cfg *Config) (*Client, error) {
@@ -83,11 +91,45 @@ func NewClient(cfg *Config) (*Client, error) {
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+
+	conn, err := dialGrpcConn(cfg.Rpc)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	grpcClient := sp1_proto.NewProverNetworkClient(conn)
+	artifact := sp1_proto.NewArtifactStoreClient(conn)
+
 	client := &Client{
-		cfg:  cfg,
-		auth: NewEIP712Auth(key),
+		cfg:      cfg,
+		conn:     grpcClient,
+		artifact: artifact,
+		auth:     NewEIP712Auth(key),
 	}
 	return client, nil
+}
+
+func dialGrpcConn(rpcEndpoint string) (*grpc.ClientConn, error) {
+	rpcUrl, err := url.Parse(rpcEndpoint)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	port := "80"
+	var opts []grpc.DialOption
+	if rpcUrl.Port() != "" {
+		port = rpcUrl.Port()
+	} else if rpcUrl.Scheme == "https" {
+		port = "443"
+	}
+	if rpcUrl.Scheme == "https" {
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+	conn, err := grpc.NewClient(fmt.Sprintf("%v:%v", rpcUrl.Host, port), opts...)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	return conn, nil
 }
 
 func (c *Client) Public() common.Address {
@@ -112,26 +154,4 @@ func (c *Client) s3(method string, url string, body io.Reader) ([]byte, error) {
 		return nil, logex.NewErrorf("http remote error: %v", string(httpBody))
 	}
 	return httpBody, nil
-}
-
-func (c *Client) api(method string, req interface{}, res interface{}) error {
-	data, err := json.Marshal(req)
-	if err != nil {
-		return logex.Trace(err)
-	}
-	resp, err := http.Post(fmt.Sprintf("%vnetwork.NetworkService/%v", c.cfg.Rpc, method), "application/json", bytes.NewReader(data))
-	if err != nil {
-		return logex.Trace(err)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return logex.Trace(err)
-	}
-	if resp.StatusCode/100 != 2 {
-		return logex.NewErrorf("remote error on [%v]: %v", method, string(body))
-	}
-	if err := json.Unmarshal(body, res); err != nil {
-		return logex.Trace(err)
-	}
-	return nil
 }

@@ -35,7 +35,7 @@ func (c *Config) Init() error {
 		c.Url = "https://api.bonsai.xyz"
 	}
 	if c.Version == "" {
-		c.Version = "1.1.3"
+		c.Version = "1.2.1"
 	}
 	if c.ApiKey == "" {
 		c.ApiKey = os.Getenv("BONSAI_API_KEY")
