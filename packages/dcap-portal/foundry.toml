@@ -9,6 +9,12 @@ remappings = [
     "@dcap-portal=./"
 ]
 
+solc = "0.8.27"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+evm_version = "shanghai"
+
 fs_permissions = [{ access = "read-write", path = "./out/deploy" }]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
