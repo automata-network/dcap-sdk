@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: APACHE2
 pragma solidity ^0.8.13;
 
+import "./Output.sol";
+
 // Abstract contract for handling callbacks from the DCAP portal
 abstract contract DcapLibCallback {
     address dcapPortalAddress;
-        /**
+    
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
@@ -17,9 +20,11 @@ abstract contract DcapLibCallback {
     // Error thrown when the caller is not the DCAP portal
     error CALLER_NOT_DCAP_PORTAL(); // 0x41a3344b
     // Error thrown when the tx.origin not expected
-    error ORIGIN_NOT_ALLOWED(address);
+    error ORIGIN_NOT_ALLOWED(address); // 0x92968c7e
     // Error thrown when the attestation output is invalid
     error INVALID_ATTESTATION_OUTPUT(); // 0xca94db0c
+    // Error thrown when the attestation TEE type is not supported
+    error INVALID_ATTESTATION_TEE(bytes4 tee); // 0x1308f90c
     // Error thrown when the magic number does not match
     error MAGIC_NUMBER_MISMATCH(); // 0xa65fc163
     // Error thrown when the version is unknown
@@ -99,32 +104,104 @@ abstract contract DcapLibCallback {
         return address(sender);
     }
 
-    // Extracts the user data from the output
-    function _attestationReportUserData() internal pure returns (bytes memory) {
-        bytes memory output = _attestationOutput();
+    // deserializes the attestation output into Solidity friendlier type
+    function _deserializeAttestationOutput(bytes memory attestationOutput) internal pure returns (Output memory output) {
+        if (attestationOutput.length < 13) {
+            revert INVALID_ATTESTATION_OUTPUT();
+        }
+        
+        // version = output[0:2]
+        uint16 quoteVersion;
 
         // tee = output[2:6]
         bytes4 tee;
+
+        // tcbStatus = output[6:7]
+        uint8 tcbStatusUint;
+
+        // fmspc = output[7:13]
+        bytes6 fmspcBytes;
+
         assembly {
-            let start := add(add(output, 0x20), 2)
-            tee := mload(start)
+            // load the quote version
+            let ptr := add(attestationOutput, 0x20)
+            quoteVersion := shr(0xF0, mload(ptr))
+
+            // load the tee type
+            ptr := add(ptr, 2)
+            tee := mload(ptr)
+
+            // load the tcb status
+            ptr := add(ptr, 4)
+            tcbStatusUint := byte(0, mload(ptr))
+
+            // load the fmspc
+            ptr := add(ptr, 1)
+            fmspcBytes := mload(ptr)
         }
 
+        output.quoteVersion = quoteVersion;
+        output.tee = tee;
+        output.tcbStatus = TCBStatus(tcbStatusUint);
+        output.fmspcBytes = fmspcBytes;
+
+        uint256 quoteBodyLength;
+        if (tee == 0x00000000) {
+            quoteBodyLength = 384;
+        } else if (tee == 0x00000081) {
+            quoteBodyLength = 584;
+        } else {
+            revert INVALID_ATTESTATION_TEE(tee);
+        }
+
+        bytes memory quoteBody = new bytes(quoteBodyLength);
+        assembly {
+            // copy the quote body
+            let src := add(add(attestationOutput, 0x20), 13)
+            let dest := add(quoteBody, 0x20)
+            for { let i := 0 } lt(i, quoteBodyLength) { i := add(i, 32) } {
+                mstore(add(dest, i), mload(add(src, i)))
+            }
+        }
+
+        output.quoteBody = quoteBody;
+        uint256 diff = attestationOutput.length - 13 - quoteBodyLength;
+        
+        if (diff > 0) {
+            bytes memory encodedAdvisoryIds = new bytes(diff);
+            
+            assembly {
+                let src := add(add(attestationOutput, 0x20), add(13, quoteBodyLength))
+                let dest := add(encodedAdvisoryIds, 0x20)
+                
+                for { let i := 0 } lt(i, diff) { i := add(i, 32) } {
+                    mstore(add(dest, i), mload(add(src, i)))
+                }
+            }
+
+            output.advisoryIDs = abi.decode(encodedAdvisoryIds, (string[]));
+        }
+    }
+
+    // Extracts the user data from the output
+    function _attestationReportUserData(bytes4 tee, bytes memory quoteBody) internal pure returns (bytes memory) {
         bytes memory reportData = new bytes(64);
         if (tee == 0x00000000) {
-            // sgx, reportData = output[333:397]
+            // sgx, reportData = quoteBody[320:384]
             assembly {
-                let start := add(add(output, 0x20), 333) // 13 + 384 - 64
+                let start := add(add(quoteBody, 0x20), 320)
+                mstore(add(reportData, 0x20), mload(start))
+                mstore(add(reportData, 0x40), mload(add(start, 32)))
+            }
+        } else if (tee == 0x00000081) {
+            // tdx, reportData = output[520:584]
+            assembly {
+                let start := add(add(quoteBody, 0x20), 520)
                 mstore(add(reportData, 0x20), mload(start))
                 mstore(add(reportData, 0x40), mload(add(start, 32)))
             }
         } else {
-            // tdx, reportData = output[533:597]
-            assembly {
-                let start := add(add(output, 0x20), 533) // 13 + 584 - 64
-                mstore(add(reportData, 0x20), mload(start))
-                mstore(add(reportData, 0x40), mload(add(start, 32)))
-            }
+            revert INVALID_ATTESTATION_TEE(tee);
         }
         return reportData;
     }
@@ -143,8 +220,8 @@ abstract contract DcapLibCallback {
     }
 
     // Extracts the user data from the output
-    function _attestationReportUserDataBytes32() internal pure returns (bytes32, bytes32) {
-        return _splitBytes64(_attestationReportUserData());
+    function _attestationReportUserDataBytes32(bytes memory userReportData) internal pure returns (bytes32, bytes32) {
+        return _splitBytes64(userReportData);
     }
 
     function _splitBytes64(bytes memory b) internal pure returns (bytes32, bytes32) {
