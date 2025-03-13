@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 // Import the DcapLibCallback library
 import {DcapLibCallback} from "@dcap-portal/src/lib/DcapLibCallback.sol";
+import {Output} from "@dcap-portal/src/lib/Output.sol";
 
 contract VerifiedCounter is DcapLibCallback {
     uint256 public number;
@@ -36,7 +37,10 @@ contract VerifiedCounter is DcapLibCallback {
 
     // Function to emit a report data, can only be called from the DCAP portal when the attestation is successful
     function debugReportData() public fromDcapPortal {
-        emit AttestationReportUserData(_attestationReportUserData());
+        bytes memory outputData = _attestationOutput();
+        Output memory output = _deserializeAttestationOutput(outputData);
+        bytes memory userReportData = _attestationReportUserData(output.tee, output.quoteBody);
+        emit AttestationReportUserData(userReportData);
     }
 
     function checkSender() public fromDcapPortalAndSender(owner) {
