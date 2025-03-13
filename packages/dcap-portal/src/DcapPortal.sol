@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: APACHE2
 pragma solidity ^0.8.13;
 
-import {IDcapAttestation} from "@dcap-portal/src/interfaces/IDcapAttestation.sol";
-import {IDcapPortal} from "@dcap-portal/src/interfaces/IDcapPortal.sol";
+import {IDcapAttestation} from "./interfaces/IDcapAttestation.sol";
+import {IDcapPortal} from "./interfaces/IDcapPortal.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -46,6 +46,7 @@ contract DcapPortal is IDcapPortal, UUPSUpgradeable, OwnableUpgradeable {
     function verifyAndAttestOnChain(bytes calldata rawQuote, Callback calldata callback)
         external
         payable
+        override
         returns (bytes memory verifiedOutput, bytes memory callbackOutput)
     {
         bool success;
@@ -64,7 +65,7 @@ contract DcapPortal is IDcapPortal, UUPSUpgradeable, OwnableUpgradeable {
      * @return The estimated fee.
      * @notice The actual fee is determined by multiplying the base fee with the gas price.
      */
-    function estimateBaseFeeVerifyOnChain(bytes calldata rawQuote) external payable returns (uint256) {
+    function estimateBaseFeeVerifyOnChain(bytes calldata rawQuote) external payable override returns (uint256) {
         uint16 bp = dcapAttestation.getBp();
         uint256 gasBefore = gasleft();
         dcapAttestation.verifyAndAttestOnChain{value: msg.value}(rawQuote);
@@ -86,7 +87,7 @@ contract DcapPortal is IDcapPortal, UUPSUpgradeable, OwnableUpgradeable {
         IDcapAttestation.ZkCoProcessorType zkCoprocessor,
         bytes calldata proofBytes,
         Callback calldata callback
-    ) external payable returns (bytes memory verifiedOutput, bytes memory callbackOutput) {
+    ) external payable override returns (bytes memory verifiedOutput, bytes memory callbackOutput) {
         bool success;
         uint256 attestationFee = _getAttestationFee(callback.value);
         (success, verifiedOutput) =
@@ -110,7 +111,7 @@ contract DcapPortal is IDcapPortal, UUPSUpgradeable, OwnableUpgradeable {
         bytes calldata output,
         IDcapAttestation.ZkCoProcessorType zkCoprocessor,
         bytes calldata proofBytes
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         uint16 bp = dcapAttestation.getBp();
         uint256 gasBefore = gasleft();
         dcapAttestation.verifyAndAttestWithZKProof{value: msg.value}(output, zkCoprocessor, proofBytes);

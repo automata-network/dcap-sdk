@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: APACHE2
 pragma solidity ^0.8.13;
 
-import {IDcapAttestation} from "@dcap-portal/src/interfaces/IDcapAttestation.sol";
+import {IDcapAttestation} from "./IDcapAttestation.sol";
 
 interface IDcapPortal {
     // Struct to hold callback information
