@@ -10,28 +10,29 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 
 contract DcapPortalScript is Script, Output {
     address attestationAddr = vm.envAddress("AUTOMATA_DCAP_ATTESTATION");
+    address owner = vm.envAddress("OWNER");
 
     function setUp() public {
         __Output_init("dcap_portal");
     }
 
-    function deployProxyAdmin() public {
-        string memory output = readJson();
-        vm.startBroadcast();
-        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
-        vm.stopBroadcast();
-        vm.serializeAddress(output, "ProxyAdmin", address(proxyAdmin));
-        saveJson(output);
-    }
+    // function deployProxyAdmin() public {
+    //     string memory output = readJson();
+    //     vm.startBroadcast(owner);
+    //     ProxyAdmin proxyAdmin = new ProxyAdmin(owner);
+    //     vm.stopBroadcast();
+    //     vm.serializeAddress(output, "ProxyAdmin", address(proxyAdmin));
+    //     saveJson(output);
+    // }
 
     function deployPortal() public {
         string memory output = readJson();
-        vm.startBroadcast();
+        vm.startBroadcast(owner);
         DcapPortal portalImplementation = new DcapPortal();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(portalImplementation),
-            address(vm.parseJsonAddress(output, ".ProxyAdmin")),
-            abi.encodeWithSelector(DcapPortal.initialize.selector, msg.sender, attestationAddr)
+            owner,
+            abi.encodeWithSelector(DcapPortal.initialize.selector, owner, attestationAddr)
         );
         vm.stopBroadcast();
         vm.serializeAddress(output, "DcapPortal", address(proxy));
@@ -40,7 +41,7 @@ contract DcapPortalScript is Script, Output {
     }
 
     function run() public {
-        deployProxyAdmin();
+        // deployProxyAdmin();
         deployPortal();
         string memory output = readJson();
         console.log(output);

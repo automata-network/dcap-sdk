@@ -1,8 +1,8 @@
 {
-    "name": "Ethereum Sepolia",
-    "chain_id": 11155111,
+    "name": "Ethereum Hoodi",
+    "chain_id": 560048,
     "testnet": true,
-    "one_rpc": "https://1rpc.io/sepolia",
+    "one_rpc": "",
     "eip1559": true,
     "automata_dcap_attestation_fee": "0x95175096a9B74165BE0ac84260cc14Fc1c0EF5FF",
     "pccs_router": "0xe20C4d54afBbea5123728d5b7dAcD9CB3c65C39a",

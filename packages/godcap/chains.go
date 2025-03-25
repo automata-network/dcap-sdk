@@ -62,6 +62,9 @@ var Chains = []*ChainConfig{
 	ChainOPMainnet,
 	ChainWorldMainnet,
 	ChainArbitrumMainnet,
+	ChainBscMainnet,
+	ChainAvalancheCMainnet,
+	ChainPolygonPosMainnet,
 	ChainAutomataTestnet,
 	ChainEthereumSepolia,
 	ChainEthereumHolesky,
@@ -69,6 +72,10 @@ var Chains = []*ChainConfig{
 	ChainOPSepolia,
 	ChainWorldSepolia,
 	ChainArbitrumSepolia,
+	ChainBscTestnet,
+	ChainAvalancheCFuji,
+	ChainPolygonPosAmoy,
+	ChainEthereumHoodi,
 }
 
 //go:embed chains_config/automata_mainnet.json
@@ -94,6 +101,18 @@ var ChainWorldMainnet = parseChainConfig(worldMainnet)
 //go:embed chains_config/arbitrum_mainnet.json
 var arbitrumMainnet []byte
 var ChainArbitrumMainnet = parseChainConfig(arbitrumMainnet)
+
+//go:embed chains_config/bsc_mainnet.json
+var bscMainnet []byte
+var ChainBscMainnet = parseChainConfig(bscMainnet)
+
+//go:embed chains_config/avalanche_c_mainnet.json
+var avalancheCMainnet []byte
+var ChainAvalancheCMainnet = parseChainConfig(avalancheCMainnet)
+
+//go:embed chains_config/polygon_pos_mainnet.json
+var polygonPosMainnet []byte
+var ChainPolygonPosMainnet = parseChainConfig(polygonPosMainnet)
 
 //go:embed chains_config/automata_testnet.json
 var automataTestnet []byte
@@ -122,3 +141,19 @@ var ChainWorldSepolia = parseChainConfig(worldSepolia)
 //go:embed chains_config/arbitrum_sepolia.json
 var arbitrumSepolia []byte
 var ChainArbitrumSepolia = parseChainConfig(arbitrumSepolia)
+
+//go:embed chains_config/bsc_testnet.json
+var bscTestnet []byte
+var ChainBscTestnet = parseChainConfig(bscTestnet)
+
+//go:embed chains_config/avalanche_c_fuji.json
+var avalancheCFuji []byte
+var ChainAvalancheCFuji = parseChainConfig(avalancheCFuji)
+
+//go:embed chains_config/polygon_pos_amoy.json
+var polygonPosAmoy []byte
+var ChainPolygonPosAmoy = parseChainConfig(polygonPosAmoy)
+
+//go:embed chains_config/ethereum_hoodi.json
+var ethereumHoodi []byte
+var ChainEthereumHoodi = parseChainConfig(ethereumHoodi)

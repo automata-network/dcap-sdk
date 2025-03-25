@@ -4,13 +4,13 @@
     "testnet": true,
     "one_rpc": "https://1rpc.io/holesky",
     "eip1559": true,
-    "automata_dcap_attestation_fee": "0xE96F553055Ca0EC9b098967bC1b00694071dbA26",
-    "pccs_router": "0xbCbBca2b20c8d286E69954FAAcf128E70eb39018",
-    "v3_quote_verifier": "0x6b27478E5d2FE9Ebd711699cE4048B17e85A1Db5",
-    "v4_quote_verifier": "0xDe71f6dA9E97BBb7C6b691370Cd4C3DB6b9f760f",
+    "automata_dcap_attestation_fee": "0x95175096a9B74165BE0ac84260cc14Fc1c0EF5FF",
+    "pccs_router": "0xe20C4d54afBbea5123728d5b7dAcD9CB3c65C39a",
+    "v3_quote_verifier": "0x816ADa3B63F3c643fb04152eA32B58Db89aadd89",
+    "v4_quote_verifier": "0x1a9E873C041F566fCBAdbD9e1358095b7Ea12AA8",
     "pccs": {
-        "automata_fmspc_tcb_dao": "0x6af6A543fD2CB7713BBaBc5F27eC8A60E20De390",
-        "automata_pcs_dao": "0xC56A307CaeB41C8E7867A9166482D3B9E29B842a",
-        "automata_enclave_identity_dao": "0x92802DFaBff9391A4e26e60fce9a22Bc72a5E646"
+        "automata_fmspc_tcb_dao": "0x63eF330eAaadA189861144FCbc9176dae41A5BAf",
+        "automata_pcs_dao": "0x45CF7485A0D394130153a3630EA0729999511C2e",
+        "automata_enclave_identity_dao": "0xc3ea5Ff40263E16cD2f4413152A77e7A6b10B0C9"
     }
 }

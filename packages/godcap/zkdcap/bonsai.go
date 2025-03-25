@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const BONSAI_IMAGE_ID = "c2eafe1ba01610f3b71281f9dd3280b33d97370bb68d3ada2925d391be245e10"
+const BONSAI_IMAGE_ID = "d6c3b4b08fa163dd44f89125f97223f6f7163e3f0f62e360d707adab8f6b7799"
 
 func BonsaiGenerateInput(quote []byte, collateral *Collateral) []byte {
 	currentTime := uint64(time.Now().Unix())
