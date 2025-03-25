@@ -1,6 +1,6 @@
 {
-    "name": "Base Sepolia",
-    "chain_id": 84532,
+    "name": "BNB Smart Chain Testnet",
+    "chain_id": 97,
     "testnet": true,
     "one_rpc": "",
     "eip1559": true,

@@ -1,6 +1,6 @@
 {
-    "name": "Base Sepolia",
-    "chain_id": 84532,
+    "name": "Polygon PoS Amoy Testnet",
+    "chain_id": 80002,
     "testnet": true,
     "one_rpc": "",
     "eip1559": true,
