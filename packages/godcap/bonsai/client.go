@@ -10,8 +10,13 @@ import (
 	"os"
 	"time"
 
+	_ "embed"
+
 	"github.com/chzyer/logex"
 )
+
+//go:embed dcap_guest.elf
+var elf []byte
 
 type ReceiptKind uint8
 
@@ -65,6 +70,7 @@ type ProveInfo struct {
 }
 
 func (c *Client) Prove(ctx context.Context, imageID string, input []byte, kind ReceiptKind) (*ProveInfo, error) {
+	err := c.UploadImage(imageID)
 	inputId, err := c.UploadInput(input)
 	if err != nil {
 		return nil, logex.Trace(err, "uploadInput")
@@ -174,6 +180,23 @@ func (c *Client) UploadInput(input []byte) (string, error) {
 		return "", logex.Trace(err)
 	}
 	return response.Uuid, nil
+}
+
+func (c *Client) UploadImage(imageID string) error {
+	var response UploadResponse
+	statusCode, err := c.api(http.MethodGet, "images/upload/"+imageID, nil, &response)
+	if err != nil {
+		return logex.Trace(err)
+	}
+
+	if statusCode == http.StatusOK {
+		// upload the image
+		if _, err := c.s3(http.MethodPut, response.Url, bytes.NewReader(elf)); err != nil {
+			return logex.Trace(err)
+		}
+	}
+
+	return nil
 }
 
 type ProofReq struct {
