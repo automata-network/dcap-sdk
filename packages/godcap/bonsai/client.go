@@ -71,6 +71,9 @@ type ProveInfo struct {
 
 func (c *Client) Prove(ctx context.Context, imageID string, input []byte, kind ReceiptKind) (*ProveInfo, error) {
 	err := c.UploadImage(imageID)
+	if err != nil {
+		return nil, logex.Trace(err, "uploadImage")
+	}
 	inputId, err := c.UploadInput(input)
 	if err != nil {
 		return nil, logex.Trace(err, "uploadInput")
