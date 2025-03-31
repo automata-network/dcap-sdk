@@ -10,13 +10,8 @@ import (
 	"os"
 	"time"
 
-	_ "embed"
-
 	"github.com/chzyer/logex"
 )
-
-//go:embed dcap_guest.elf
-var elf []byte
 
 type ReceiptKind uint8
 
@@ -70,10 +65,6 @@ type ProveInfo struct {
 }
 
 func (c *Client) Prove(ctx context.Context, imageID string, input []byte, kind ReceiptKind) (*ProveInfo, error) {
-	err := c.UploadImage(imageID)
-	if err != nil {
-		return nil, logex.Trace(err, "uploadImage")
-	}
 	inputId, err := c.UploadInput(input)
 	if err != nil {
 		return nil, logex.Trace(err, "uploadInput")
@@ -131,7 +122,7 @@ func (c *Client) s3(method string, url string, body io.Reader) ([]byte, error) {
 
 func (c *Client) api(method string, path string, body io.Reader, response interface{}) (int, error) {
 	// defaults to BAD_REQUEST error if failed before http call
-	statusCode := 400
+	statusCode := http.StatusBadRequest
 
 	req, err := http.NewRequest(method, fmt.Sprintf("%v/%v", c.cfg.Url, path), body)
 	if err != nil {
@@ -185,7 +176,7 @@ func (c *Client) UploadInput(input []byte) (string, error) {
 	return response.Uuid, nil
 }
 
-func (c *Client) UploadImage(imageID string) error {
+func (c *Client) UploadImage(imageID string, elf []byte) error {
 	var response UploadResponse
 	statusCode, err := c.api(http.MethodGet, "images/upload/"+imageID, nil, &response)
 	if err != nil {

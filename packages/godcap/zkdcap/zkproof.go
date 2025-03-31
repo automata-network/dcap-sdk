@@ -86,6 +86,11 @@ func (c *ZkProofClient) ProveQuote(ctx context.Context, ty ZkType, quote []byte,
 		if c.Bonsai == nil {
 			return nil, logex.NewError("BONSAI_API_KEY is required")
 		}
+		// Upload image to Bonsai if not already uploaded
+		err := c.Bonsai.UploadImage(BONSAI_IMAGE_ID, BONSAI_DCAP_GUEST_ELF)
+		if err != nil {
+			return nil, logex.Trace(err)
+		}
 		// Generate input for Bonsai proof
 		input := BonsaiGenerateInput(quote, collateral)
 		// Generate Bonsai proof
