@@ -120,13 +120,16 @@ func (c *Client) s3(method string, url string, body io.Reader) ([]byte, error) {
 	return httpBody, nil
 }
 
-func (c *Client) api(method string, path string, body io.Reader, response interface{}) error {
+func (c *Client) api(method string, path string, body io.Reader, response interface{}) (int, error) {
+	// defaults to BAD_REQUEST error if failed before http call
+	statusCode := http.StatusBadRequest
+
 	req, err := http.NewRequest(method, fmt.Sprintf("%v/%v", c.cfg.Url, path), body)
 	if err != nil {
-		return logex.Trace(err)
+		return statusCode, logex.Trace(err)
 	}
 	if c.cfg.ApiKey == "" {
-		return logex.NewError("BONSAI_API_KEY is required")
+		return statusCode, logex.NewError("BONSAI_API_KEY is required")
 	}
 	if method == http.MethodPost {
 		req.Header.Set("Content-Type", "application/json")
@@ -134,23 +137,27 @@ func (c *Client) api(method string, path string, body io.Reader, response interf
 	req.Header.Set("x-api-key", c.cfg.ApiKey)
 	req.Header.Set("x-risc0-version", c.cfg.Version)
 	httpResponse, err := http.DefaultClient.Do(req)
+
+	statusCode = httpResponse.StatusCode
+
 	if err != nil {
-		return logex.Trace(err)
+		return statusCode, logex.Trace(err)
 	}
 	defer httpResponse.Body.Close()
 	httpBody, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
-		return logex.Trace(err)
+		return statusCode, logex.Trace(err)
 	}
+
 	if httpResponse.StatusCode/100 != 2 {
-		return logex.NewErrorf("http remote error: %v", string(httpBody))
+		return statusCode, logex.NewErrorf("http remote error: %v", string(httpBody))
 	}
 	if response != nil {
 		if err := json.Unmarshal(httpBody, response); err != nil {
-			return logex.Trace(err)
+			return statusCode, logex.Trace(err)
 		}
 	}
-	return nil
+	return statusCode, nil
 }
 
 type UploadResponse struct {
@@ -160,13 +167,30 @@ type UploadResponse struct {
 
 func (c *Client) UploadInput(input []byte) (string, error) {
 	var response UploadResponse
-	if err := c.api(http.MethodGet, "inputs/upload", nil, &response); err != nil {
+	if _, err := c.api(http.MethodGet, "inputs/upload", nil, &response); err != nil {
 		return "", logex.Trace(err)
 	}
 	if _, err := c.s3(http.MethodPut, response.Url, bytes.NewReader(input)); err != nil {
 		return "", logex.Trace(err)
 	}
 	return response.Uuid, nil
+}
+
+func (c *Client) UploadImage(imageID string, elf []byte) error {
+	var response UploadResponse
+	statusCode, err := c.api(http.MethodGet, "images/upload/"+imageID, nil, &response)
+	if err != nil {
+		return logex.Trace(err)
+	}
+
+	if statusCode == http.StatusOK {
+		// upload the image
+		if _, err := c.s3(http.MethodPut, response.Url, bytes.NewReader(elf)); err != nil {
+			return logex.Trace(err)
+		}
+	}
+
+	return nil
 }
 
 type ProofReq struct {
@@ -194,7 +218,7 @@ type SnarkSession struct {
 
 func (s *SnarkSession) Status(ctx context.Context) (*SnarkStatusRes, error) {
 	var res SnarkStatusRes
-	if err := s.client.api(http.MethodGet, fmt.Sprintf("snark/status/%v", s.uuid), nil, &res); err != nil {
+	if _, err := s.client.api(http.MethodGet, fmt.Sprintf("snark/status/%v", s.uuid), nil, &res); err != nil {
 		return nil, logex.Trace(err, "SessionStatus")
 	}
 	return &res, nil
@@ -251,7 +275,7 @@ type Session struct {
 func (c *Client) CreateSessionWithLimit(proof *ProofReq) (*Session, error) {
 	req, _ := json.Marshal(proof)
 	var response CreateSessRes
-	if err := c.api(http.MethodPost, "sessions/create", bytes.NewReader(req), &response); err != nil {
+	if _, err := c.api(http.MethodPost, "sessions/create", bytes.NewReader(req), &response); err != nil {
 		return nil, logex.Trace(err)
 	}
 	return &Session{uuid: response.Uuid, client: c}, nil
@@ -309,7 +333,7 @@ type SessionStats struct {
 
 func (s *Session) Status(ctx context.Context) (*SessionStatusRes, error) {
 	var res SessionStatusRes
-	if err := s.client.api(http.MethodGet, fmt.Sprintf("sessions/status/%v", s.uuid), nil, &res); err != nil {
+	if _, err := s.client.api(http.MethodGet, fmt.Sprintf("sessions/status/%v", s.uuid), nil, &res); err != nil {
 		return nil, logex.Trace(err, "SessionStatus")
 	}
 	return &res, nil
@@ -339,7 +363,7 @@ type SnarkStatusRes struct {
 func (s *Session) CreateSnark(ctx context.Context) (*SnarkSession, error) {
 	data, _ := json.Marshal(&SnarkReq{SessionID: s.uuid})
 	var response CreateSessRes
-	if err := s.client.api(http.MethodPost, "snark/create", bytes.NewReader(data), &response); err != nil {
+	if _, err := s.client.api(http.MethodPost, "snark/create", bytes.NewReader(data), &response); err != nil {
 		return nil, logex.Trace(err)
 	}
 	return &SnarkSession{uuid: response.Uuid, client: s.client}, nil
