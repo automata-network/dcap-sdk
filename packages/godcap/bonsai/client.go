@@ -152,7 +152,7 @@ func (c *Client) api(method string, path string, body io.Reader, response interf
 	if httpResponse.StatusCode/100 != 2 {
 		return statusCode, logex.NewErrorf("http remote error: %v", string(httpBody))
 	}
-	if response != nil {
+	if response != nil && len(httpBody) != 0 {
 		if err := json.Unmarshal(httpBody, response); err != nil {
 			return statusCode, logex.Trace(err)
 		}
