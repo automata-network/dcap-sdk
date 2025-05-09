@@ -2,6 +2,7 @@ package zkdcap
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/automata-network/dcap-sdk/packages/godcap/bonsai"
 	"github.com/automata-network/dcap-sdk/packages/godcap/pccs"
@@ -100,7 +101,10 @@ func (c *ZkProofClient) ProveQuote(ctx context.Context, ty ZkType, quote []byte,
 		}
 		// Set proof output and proof data
 		proof.Output = []byte(proveInfo.Receipt.Journal.Bytes)
-		proof.Proof = bonsai.Groth16Encode([]byte(proveInfo.Receipt.Inner.Groth16.Seal))
+		groth16 := proveInfo.Receipt.Inner.Groth16
+		var selector [4]byte
+		binary.LittleEndian.PutUint32(selector[:], groth16.VerifierParameters[0])
+		proof.Proof = bonsai.Groth16Encode(selector, []byte(groth16.Seal))
 	case ZkTypeSuccinct:
 		if c.Sp1 == nil {
 			return nil, logex.NewError("NETWORK_PRIVATE_KEY is required")
