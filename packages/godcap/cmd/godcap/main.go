@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/automata-network/dcap-sdk/packages/godcap"
+	"github.com/automata-network/dcap-sdk/packages/godcap/registry"
 	"github.com/chzyer/flagly"
 	"github.com/chzyer/logex"
 )
@@ -19,18 +19,18 @@ type GoDcapConfig struct {
 }
 
 type GoDcapConfigContract struct {
-	ChainId int64 `type:"[0]"`
+	ChainId uint64 `type:"[0]"`
 }
 
 func (g *GoDcapConfigContract) FlaglyHandle() error {
-	chain := godcap.ChainConfigFromChainId(g.ChainId)
 	if g.ChainId == 0 {
 		return flagly.ErrShowUsage
 	}
-	if chain == nil {
+	network, err := registry.ByChainID(g.ChainId)
+	if err != nil {
 		return logex.NewErrorf("chain_id=%v not found", g.ChainId)
 	}
-	fmt.Println(chain.AutomataDcapAttestationFee)
+	fmt.Println(network.Contracts.Dcap.DcapAttestationFee)
 	return nil
 }
 

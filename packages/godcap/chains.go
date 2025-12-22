@@ -1,159 +1,51 @@
 package godcap
 
 import (
-	"encoding/json"
-
-	_ "embed"
-
-	"github.com/automata-network/dcap-sdk/packages/godcap/pccs"
-	"github.com/chzyer/logex"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/automata-network/dcap-sdk/packages/godcap/registry"
 )
 
-type ChainConfig struct {
-	ChainId                    int64             `json:"chain_id"`
-	Name                       string            `json:"name"`
-	Testnet                    bool              `json:"testnet"`
-	OneRpc                     string            `json:"one_rpc"`
-	Endpoint                   string            `json:"endpoint"`
-	EIP1559                    bool              `json:"eip_1559"`
-	Explorer                   string            `json:"explorer"`
-	DcapPortal                 common.Address    `json:"dcap_portal"`
-	AutomataDcapAttestationFee common.Address    `json:"automata_dcap_attestation_fee"`
-	PCCSRouter                 common.Address    `json:"pccs_router"`
-	V3QuoteVerifier            common.Address    `json:"v3_quote_verifier"`
-	V4QuoteVerifier            common.Address    `json:"v4_quote_verifier"`
-	PCCS                       *pccs.ChainConfig `json:"pccs"`
-}
+// Network is an alias for registry.Network for convenience
+type Network = registry.Network
 
-func parseChainConfig(data []byte) *ChainConfig {
-	var chainConfig ChainConfig
-	err := json.Unmarshal(data, &chainConfig)
-	if err != nil {
-		logex.Info(string(data))
-		logex.Fatal(err)
-	}
-	return &chainConfig
-}
+// Re-export registry functions for convenience
+var (
+	// GetNetworkByKey returns a network by its key (e.g., "eth_mainnet")
+	GetNetworkByKey = registry.ByKey
 
-func ChainConfigFromChainId(chainId int64) *ChainConfig {
-	for _, item := range Chains {
-		if item.ChainId == chainId {
-			return item
-		}
-	}
-	return nil
-}
+	// GetNetworkByChainID returns a network by its chain ID
+	GetNetworkByChainID = registry.ByChainID
 
-func AddChainConfig(chain *ChainConfig) bool {
-	for _, item := range Chains {
-		if item.ChainId == chain.ChainId {
-			return false
-		}
-	}
-	Chains = append(Chains, chain)
-	return true
-}
+	// GetDefaultNetwork returns the default network (automata_testnet)
+	GetDefaultNetwork = registry.Default
 
-var Chains = []*ChainConfig{
-	ChainAutomataMainnet,
-	ChainEthereumMainnet,
-	ChainBaseMainnet,
-	ChainOPMainnet,
-	ChainWorldMainnet,
-	ChainArbitrumMainnet,
-	ChainBscMainnet,
-	ChainAvalancheCMainnet,
-	ChainPolygonPosMainnet,
-	ChainAutomataTestnet,
-	ChainEthereumSepolia,
-	ChainEthereumHolesky,
-	ChainBaseSepolia,
-	ChainOPSepolia,
-	ChainWorldSepolia,
-	ChainArbitrumSepolia,
-	ChainBscTestnet,
-	ChainAvalancheCFuji,
-	ChainPolygonPosAmoy,
-	ChainEthereumHoodi,
-}
+	// GetAllNetworks returns all registered networks
+	GetAllNetworks = registry.All
 
-//go:embed chains_config/automata_mainnet.json
-var automataMainnet []byte
-var ChainAutomataMainnet = parseChainConfig(automataMainnet)
+	// GetMainnets returns all mainnet networks
+	GetMainnets = registry.Mainnets
 
-//go:embed chains_config/ethereum_mainnet.json
-var ethereumMainnet []byte
-var ChainEthereumMainnet = parseChainConfig(ethereumMainnet)
+	// GetTestnets returns all testnet networks
+	GetTestnets = registry.Testnets
+)
 
-//go:embed chains_config/base_mainnet.json
-var baseMainnet []byte
-var ChainBaseMainnet = parseChainConfig(baseMainnet)
-
-//go:embed chains_config/op_mainnet.json
-var opMainnet []byte
-var ChainOPMainnet = parseChainConfig(opMainnet)
-
-//go:embed chains_config/world_mainnet.json
-var worldMainnet []byte
-var ChainWorldMainnet = parseChainConfig(worldMainnet)
-
-//go:embed chains_config/arbitrum_mainnet.json
-var arbitrumMainnet []byte
-var ChainArbitrumMainnet = parseChainConfig(arbitrumMainnet)
-
-//go:embed chains_config/bsc_mainnet.json
-var bscMainnet []byte
-var ChainBscMainnet = parseChainConfig(bscMainnet)
-
-//go:embed chains_config/avalanche_c_mainnet.json
-var avalancheCMainnet []byte
-var ChainAvalancheCMainnet = parseChainConfig(avalancheCMainnet)
-
-//go:embed chains_config/polygon_pos_mainnet.json
-var polygonPosMainnet []byte
-var ChainPolygonPosMainnet = parseChainConfig(polygonPosMainnet)
-
-//go:embed chains_config/automata_testnet.json
-var automataTestnet []byte
-var ChainAutomataTestnet = parseChainConfig(automataTestnet)
-
-//go:embed chains_config/ethereum_sepolia.json
-var ethereumSepolia []byte
-var ChainEthereumSepolia = parseChainConfig(ethereumSepolia)
-
-//go:embed chains_config/ethereum_holesky.json
-var ethereumHolesky []byte
-var ChainEthereumHolesky = parseChainConfig(ethereumHolesky)
-
-//go:embed chains_config/base_sepolia.json
-var baseSepolia []byte
-var ChainBaseSepolia = parseChainConfig(baseSepolia)
-
-//go:embed chains_config/op_sepolia.json
-var opSepolia []byte
-var ChainOPSepolia = parseChainConfig(opSepolia)
-
-//go:embed chains_config/world_sepolia.json
-var worldSepolia []byte
-var ChainWorldSepolia = parseChainConfig(worldSepolia)
-
-//go:embed chains_config/arbitrum_sepolia.json
-var arbitrumSepolia []byte
-var ChainArbitrumSepolia = parseChainConfig(arbitrumSepolia)
-
-//go:embed chains_config/bsc_testnet.json
-var bscTestnet []byte
-var ChainBscTestnet = parseChainConfig(bscTestnet)
-
-//go:embed chains_config/avalanche_c_fuji.json
-var avalancheCFuji []byte
-var ChainAvalancheCFuji = parseChainConfig(avalancheCFuji)
-
-//go:embed chains_config/polygon_pos_amoy.json
-var polygonPosAmoy []byte
-var ChainPolygonPosAmoy = parseChainConfig(polygonPosAmoy)
-
-//go:embed chains_config/ethereum_hoodi.json
-var ethereumHoodi []byte
-var ChainEthereumHoodi = parseChainConfig(ethereumHoodi)
+// Common network accessors
+var (
+	NetworkEthereumMainnet  = registry.EthereumMainnet
+	NetworkEthereumSepolia  = registry.EthereumSepolia
+	NetworkArbitrumMainnet  = registry.ArbitrumMainnet
+	NetworkArbitrumSepolia  = registry.ArbitrumSepolia
+	NetworkBaseMainnet      = registry.BaseMainnet
+	NetworkBaseSepolia      = registry.BaseSepolia
+	NetworkOptimismMainnet  = registry.OptimismMainnet
+	NetworkOptimismSepolia  = registry.OptimismSepolia
+	NetworkPolygonMainnet   = registry.PolygonMainnet
+	NetworkPolygonAmoy      = registry.PolygonAmoy
+	NetworkBnbMainnet       = registry.BnbMainnet
+	NetworkBnbTestnet       = registry.BnbTestnet
+	NetworkAvalancheMainnet = registry.AvalancheMainnet
+	NetworkAvalancheFuji    = registry.AvalancheFuji
+	NetworkAutomataMainnet  = registry.AutomataMainnet
+	NetworkAutomataTestnet  = registry.AutomataTestnet
+	NetworkWorldMainnet     = registry.WorldMainnet
+	NetworkWorldSepolia     = registry.WorldSepolia
+)

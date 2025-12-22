@@ -55,8 +55,8 @@ Simplified snippet to show how you can integrate your code with Go DCAP.
 ```go
 func main() {
     // Initiation
-    portal, err := godcap.NewDcapPortal(ctx, 
-        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+    portal, err := godcap.NewDcapPortal(ctx,
+        godcap.WithNetwork(registry.AutomataTestnet()),
         godcap.WithPrivateKey(privateKeyStr),
     )
     // error handling
@@ -102,8 +102,8 @@ Note: `VerifiedCounter` can be found [here](../dcap-portal/src/examples/Verified
 ```go
 func VerifyAndAttestOnChain(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
-    portal, err := godcap.NewDcapPortal(ctx, 
-        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+    portal, err := godcap.NewDcapPortal(ctx,
+        godcap.WithNetwork(registry.AutomataTestnet()),
         godcap.WithPrivateKey(privateKeyStr),
     )
     if err != nil {
@@ -140,8 +140,8 @@ func VerifyAndAttestOnChain(ctx context.Context, quote []byte, privateKeyStr str
 
 func VerifyWithRisc0ZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
-    portal, err := godcap.NewDcapPortal(ctx, 
-        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+    portal, err := godcap.NewDcapPortal(ctx,
+        godcap.WithNetwork(registry.AutomataTestnet()),
         godcap.WithPrivateKey(privateKeyStr),
     )
     if err != nil {
@@ -185,8 +185,8 @@ func VerifyWithRisc0ZkProof(ctx context.Context, quote []byte, privateKeyStr str
 
 func VerifyWithSuccinctZkProof(ctx context.Context, quote []byte, privateKeyStr string) error {
     // Create a new DCAP portal instance
-    portal, err := godcap.NewDcapPortal(ctx, 
-        godcap.WithChainConfig(godcap.ChainAutomataTestnet), 
+    portal, err := godcap.NewDcapPortal(ctx,
+        godcap.WithNetwork(registry.AutomataTestnet()),
         godcap.WithPrivateKey(privateKeyStr),
     )
     if err != nil {

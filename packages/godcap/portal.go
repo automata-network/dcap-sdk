@@ -12,6 +12,7 @@ import (
 
 	"github.com/automata-network/dcap-sdk/packages/godcap/parser"
 	"github.com/automata-network/dcap-sdk/packages/godcap/pccs"
+	"github.com/automata-network/dcap-sdk/packages/godcap/registry"
 	"github.com/automata-network/dcap-sdk/packages/godcap/stubs/DcapLibCallback"
 	gen "github.com/automata-network/dcap-sdk/packages/godcap/stubs/DcapPortal"
 	"github.com/automata-network/dcap-sdk/packages/godcap/stubs/IDcapAttestation"
@@ -72,28 +73,29 @@ func WithClient(client *ethclient.Client) DcapPortalOption {
 
 		p.chainID = chainId.Int64()
 		p.client = client
-		if p.chain == nil {
-			chainConfig := ChainConfigFromChainId(p.chainID)
-			if chainConfig == nil {
-				return logex.NewErrorf("chain config is not found for chain id %v", p.chainID)
+		if p.network == nil {
+			network, err := registry.ByChainID(uint64(p.chainID))
+			if err != nil {
+				return logex.NewErrorf("network config not found for chain id %v", p.chainID)
 			}
-			WithChainConfig(chainConfig)(ctx, p)
+			WithNetwork(network)(ctx, p)
 		}
 		return nil
 	}
 }
 
-// Custom chain config
-func WithChainConfig(chainConfig *ChainConfig) DcapPortalOption {
+// WithNetwork sets the network configuration
+func WithNetwork(network *registry.Network) DcapPortalOption {
 	return func(ctx context.Context, p *DcapPortal) error {
-		if p.chain != nil {
-			return logex.NewErrorf("chain config already set")
+		if p.network != nil {
+			return logex.NewErrorf("network already set")
 		}
 
-		p.chain = chainConfig
+		p.network = network
 		return nil
 	}
 }
+
 
 func WithPrivateKey(key string) DcapPortalOption {
 	return func(ctx context.Context, p *DcapPortal) error {
@@ -123,7 +125,8 @@ type DcapPortal struct {
 	client     *ethclient.Client
 	chainID    int64
 	zkConfig   *zkdcap.ZkProofConfig
-	chain      *ChainConfig
+	network    *registry.Network
+	eip1559    bool // Whether to use EIP-1559 transactions
 	privateKey *ecdsa.PrivateKey
 
 	Stub    *gen.DcapPortal
@@ -143,21 +146,22 @@ func NewDcapPortal(ctx context.Context, options ...DcapPortalOption) (*DcapPorta
 			return nil, logex.Trace(err)
 		}
 	}
-	if portal.chain == nil {
-		if err := WithChainConfig(ChainAutomataTestnet)(ctx, &portal); err != nil {
+	if portal.network == nil {
+		network, err := registry.Default()
+		if err != nil {
+			return nil, logex.Trace(err, "failed to get default network")
+		}
+		if err := WithNetwork(network)(ctx, &portal); err != nil {
 			return nil, logex.Trace(err)
 		}
 	}
 
 	// try to connect to the default endpoint if client is not set
 	if portal.client == nil {
-		endpoint := portal.chain.Endpoint
-		if endpoint == "" {
-			endpoint = portal.chain.OneRpc
-		}
+		endpoint := portal.network.DefaultRpcUrl()
 		if endpoint != "" {
 			if err := WithEndpoint(endpoint)(ctx, &portal); err != nil {
-				return nil, logex.Trace(err, "defaultEndpoint", portal.chain.Endpoint)
+				return nil, logex.Trace(err, "defaultEndpoint", endpoint)
 			}
 		}
 	}
@@ -165,7 +169,13 @@ func NewDcapPortal(ctx context.Context, options ...DcapPortalOption) (*DcapPorta
 		return nil, logex.NewError("client is not set")
 	}
 
-	stub, err := gen.NewDcapPortal(portal.chain.DcapPortal, portal.client)
+	// Check if DcapPortal is available for this network
+	portalAddr := portal.network.Contracts.Dcap.DcapPortal
+	if portalAddr == (common.Address{}) {
+		return nil, logex.NewErrorf("DcapPortal not available for network %s", portal.network.Key)
+	}
+
+	stub, err := gen.NewDcapPortal(portalAddr, portal.client)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -191,13 +201,16 @@ func NewDcapPortal(ctx context.Context, options ...DcapPortalOption) (*DcapPorta
 	}
 	portal.dcapAbi = dcapAbi
 
-	pccs, err := pccs.NewClient(portal.client, portal.chain.PCCS)
+	// Default to EIP-1559 transactions
+	portal.eip1559 = true
+
+	pccsClient, err := pccs.NewClient(portal.client, portal.network)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	portal.pccs = pccs
+	portal.pccs = pccsClient
 
-	zkProofClient, err := zkdcap.NewZkProofClient(portal.zkConfig, pccs)
+	zkProofClient, err := zkdcap.NewZkProofClient(portal.zkConfig, pccsClient)
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -218,7 +231,7 @@ func (p *DcapPortal) BuildTransactOpts(ctx context.Context) (*bind.TransactOpts,
 		return nil, logex.NewError("private key is not set(WithPrivateKey)")
 	}
 
-	opts, err := bind.NewKeyedTransactorWithChainID(p.privateKey, big.NewInt(p.chain.ChainId))
+	opts, err := bind.NewKeyedTransactorWithChainID(p.privateKey, big.NewInt(int64(p.network.ChainID)))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
@@ -244,8 +257,8 @@ func (p *DcapPortal) WaitTx(ctx context.Context, tx *types.Transaction) <-chan *
 				}
 
 				logex.Infof("tx receipt %v comfirmed on %v", tx.Hash(), receipt.BlockNumber)
-				if p.chain.Explorer != "" {
-					logex.Infof("explorer: %v/tx/%v", p.chain.Explorer, tx.Hash())
+				if explorer := p.network.DefaultExplorer(); explorer != "" {
+					logex.Infof("explorer: %v/tx/%v", explorer, tx.Hash())
 				}
 				result <- receipt
 				return
@@ -427,17 +440,17 @@ func (p *DcapPortal) callContract(ctx context.Context, abi *abi.ABI, method stri
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
-	var to *common.Address
+	var to common.Address
 	if abi == &p.abi {
-		to = &p.chain.DcapPortal
+		to = p.network.Contracts.Dcap.DcapPortal
 	} else if abi == &p.dcapAbi {
-		to = &p.chain.AutomataDcapAttestationFee
+		to = p.network.Contracts.Dcap.DcapAttestationFee
 	} else {
 		return nil, logex.NewError("unknown abi")
 	}
 	msg := ethereum.CallMsg{
 		From:  from,
-		To:    to,
+		To:    &to,
 		Value: value,
 		Data:  calldata,
 	}
@@ -508,7 +521,7 @@ func (p *DcapPortal) decodeErr(err error, callback *Callback) error {
 
 // attestationFee calculates the attestation fee based on the transaction options and fee base
 func (p *DcapPortal) attestationFee(opts *bind.TransactOpts, feeBase *big.Int) *big.Int {
-	if p.chain.EIP1559 {
+	if p.eip1559 {
 		return new(big.Int).Mul(opts.GasFeeCap, feeBase)
 	} else {
 		return new(big.Int).Mul(opts.GasPrice, feeBase)
@@ -532,17 +545,17 @@ func (p *DcapPortal) normalizeOpts(optsRef *bind.TransactOpts) (*bind.TransactOp
 	var head *types.Header
 	var err error
 
-	if p.chain.EIP1559 && opts.GasFeeCap == nil {
+	if p.eip1559 && opts.GasFeeCap == nil {
 		head, err = p.client.HeaderByNumber(opts.Context, nil)
 		if err != nil {
 			return nil, logex.Trace(err)
 		}
-		if head.BaseFee == nil && p.chain.EIP1559 {
-			p.chain.EIP1559 = false
+		if head.BaseFee == nil && p.eip1559 {
+			p.eip1559 = false
 		}
 	}
 
-	if p.chain.EIP1559 {
+	if p.eip1559 {
 		if opts.GasTipCap == nil {
 			tip, err := p.client.SuggestGasTipCap(opts.Context)
 			if err != nil {

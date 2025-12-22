@@ -6,21 +6,14 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/automata-network/dcap-sdk/packages/godcap/registry"
 	"github.com/automata-network/dcap-sdk/packages/godcap/stubs/AutomataEnclaveIdentityDao"
 	"github.com/automata-network/dcap-sdk/packages/godcap/stubs/AutomataFmspcTcbDao"
 	"github.com/automata-network/dcap-sdk/packages/godcap/stubs/AutomataPcsDao"
 	"github.com/chzyer/logex"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
-
-// ChainConfig holds the addresses of the smart contracts
-type ChainConfig struct {
-	AutomataPcsDao             common.Address `json:"automata_pcs_dao"`
-	AutomataFmspcTcbDao        common.Address `json:"automata_fmspc_tcb_dao"`
-	AutomataEnclaveIdentityDao common.Address `json:"automata_enclave_identity_dao"`
-}
 
 // Constants for CA types
 const (
@@ -37,37 +30,119 @@ const (
 	ENCLAVE_ID_TDQE
 )
 
-// Server struct holds the Ethereum client and contract instances
+// Client holds the Ethereum client and contract instances
 type Client struct {
-	client    *ethclient.Client
-	pcs       *AutomataPcsDao.AutomataPcsDao
-	fmspc     *AutomataFmspcTcbDao.AutomataFmspcTcbDao
-	enclaveId *AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao
+	client  *ethclient.Client
+	network *registry.Network
+	pcs     *AutomataPcsDao.AutomataPcsDao
+
+	// Versioned DAO instances - lazily initialized
+	fmspcDaos     map[uint32]*AutomataFmspcTcbDao.AutomataFmspcTcbDao
+	enclaveIdDaos map[uint32]*AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao
+
+	// Default DAO instances (highest version or legacy)
+	defaultFmspc     *AutomataFmspcTcbDao.AutomataFmspcTcbDao
+	defaultEnclaveId *AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao
 }
 
-// NewClient initializes a new Server instance
-func NewClient(client *ethclient.Client, chain *ChainConfig) (*Client, error) {
+// NewClient initializes a new Client instance from a Network
+func NewClient(client *ethclient.Client, network *registry.Network) (*Client, error) {
 	// Initialize AutomataPcsDao contract
-	pcs, err := AutomataPcsDao.NewAutomataPcsDao(chain.AutomataPcsDao, client)
+	pcs, err := AutomataPcsDao.NewAutomataPcsDao(network.Contracts.Pccs.PcsDao, client)
 	if err != nil {
-		return nil, logex.Trace(err, chain.AutomataPcsDao)
+		return nil, logex.Trace(err, network.Contracts.Pccs.PcsDao)
 	}
-	// Initialize AutomataFmspcTcbDao contract
-	fmspc, err := AutomataFmspcTcbDao.NewAutomataFmspcTcbDao(chain.AutomataFmspcTcbDao, client)
+
+	// Get default addresses for versioned DAOs
+	fmspcAddr, err := network.GetDefaultFmspcTcbDaoAddress()
 	if err != nil {
-		return nil, logex.Trace(err, chain.AutomataFmspcTcbDao)
+		return nil, logex.Trace(err, "failed to get default FmspcTcbDao address")
 	}
-	// Initialize AutomataEnclaveIdentityDao contract
-	enclaveId, err := AutomataEnclaveIdentityDao.NewAutomataEnclaveIdentityDao(chain.AutomataEnclaveIdentityDao, client)
+
+	enclaveIdAddr, err := network.GetDefaultEnclaveIdDaoAddress()
 	if err != nil {
-		return nil, logex.Trace(err, chain.AutomataEnclaveIdentityDao)
+		return nil, logex.Trace(err, "failed to get default EnclaveIdDao address")
 	}
+
+	// Initialize default FmspcTcbDao
+	defaultFmspc, err := AutomataFmspcTcbDao.NewAutomataFmspcTcbDao(fmspcAddr, client)
+	if err != nil {
+		return nil, logex.Trace(err, fmspcAddr)
+	}
+
+	// Initialize default EnclaveIdentityDao
+	defaultEnclaveId, err := AutomataEnclaveIdentityDao.NewAutomataEnclaveIdentityDao(enclaveIdAddr, client)
+	if err != nil {
+		return nil, logex.Trace(err, enclaveIdAddr)
+	}
+
 	return &Client{
-		client:    client,
-		pcs:       pcs,
-		fmspc:     fmspc,
-		enclaveId: enclaveId,
+		client:           client,
+		network:          network,
+		pcs:              pcs,
+		fmspcDaos:        make(map[uint32]*AutomataFmspcTcbDao.AutomataFmspcTcbDao),
+		enclaveIdDaos:    make(map[uint32]*AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao),
+		defaultFmspc:     defaultFmspc,
+		defaultEnclaveId: defaultEnclaveId,
 	}, nil
+}
+
+// GetFmspcTcbDaoForVersion returns the FmspcTcbDao for a specific TCB eval version
+func (p *Client) GetFmspcTcbDaoForVersion(tcbEvalNum uint32) (*AutomataFmspcTcbDao.AutomataFmspcTcbDao, error) {
+	// Check cache
+	if dao, ok := p.fmspcDaos[tcbEvalNum]; ok {
+		return dao, nil
+	}
+
+	// Get address for this version
+	addr, err := p.network.GetFmspcTcbDaoAddress(tcbEvalNum)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+
+	// Create new instance
+	dao, err := AutomataFmspcTcbDao.NewAutomataFmspcTcbDao(addr, p.client)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+
+	// Cache it
+	p.fmspcDaos[tcbEvalNum] = dao
+	return dao, nil
+}
+
+// GetEnclaveIdDaoForVersion returns the EnclaveIdDao for a specific TCB eval version
+func (p *Client) GetEnclaveIdDaoForVersion(tcbEvalNum uint32) (*AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao, error) {
+	// Check cache
+	if dao, ok := p.enclaveIdDaos[tcbEvalNum]; ok {
+		return dao, nil
+	}
+
+	// Get address for this version
+	addr, err := p.network.GetEnclaveIdDaoAddress(tcbEvalNum)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+
+	// Create new instance
+	dao, err := AutomataEnclaveIdentityDao.NewAutomataEnclaveIdentityDao(addr, p.client)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+
+	// Cache it
+	p.enclaveIdDaos[tcbEvalNum] = dao
+	return dao, nil
+}
+
+// AvailableTcbEvalVersions returns all available TCB evaluation versions
+func (p *Client) AvailableTcbEvalVersions() []uint32 {
+	return p.network.Contracts.Pccs.EnclaveIdDao.AvailableVersions()
+}
+
+// Network returns the network configuration
+func (p *Client) Network() *registry.Network {
+	return p.network
 }
 
 // CertCrl holds certificate and CRL data
@@ -97,12 +172,30 @@ func (t *TcbInfo) Encode() []byte {
 	return data
 }
 
-// GetTcbInfo retrieves TCB information by type, FMSPC, and version
+// GetTcbInfo retrieves TCB information by type, FMSPC, and version (uses default DAO)
 func (p *Client) GetTcbInfo(ctx context.Context, tcbType uint8, fmspc string, tcbVersion uint32) (*TcbInfo, error) {
-	result, err := p.fmspc.GetTcbInfo(&bind.CallOpts{Context: ctx}, big.NewInt(int64(tcbType)), fmspc, big.NewInt(int64(tcbVersion)))
+	return p.GetTcbInfoWithEvalNum(ctx, tcbType, fmspc, tcbVersion, nil)
+}
+
+// GetTcbInfoWithEvalNum retrieves TCB information with a specific TCB eval number
+func (p *Client) GetTcbInfoWithEvalNum(ctx context.Context, tcbType uint8, fmspc string, tcbVersion uint32, tcbEvalNum *uint32) (*TcbInfo, error) {
+	var dao *AutomataFmspcTcbDao.AutomataFmspcTcbDao
+	var err error
+
+	if tcbEvalNum != nil {
+		dao, err = p.GetFmspcTcbDaoForVersion(*tcbEvalNum)
+		if err != nil {
+			return nil, logex.Trace(err)
+		}
+	} else {
+		dao = p.defaultFmspc
+	}
+
+	result, err := dao.GetTcbInfo(&bind.CallOpts{Context: ctx}, big.NewInt(int64(tcbType)), fmspc, big.NewInt(int64(tcbVersion)))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+
 	var info TcbInfo
 	if err := json.Unmarshal([]byte(result.TcbInfoStr), &info.TcbInfo); err != nil {
 		return nil, logex.Trace(err)
@@ -123,12 +216,30 @@ func (e *EnclaveIdentityInfo) Encode() []byte {
 	return data
 }
 
-// GetEnclaveID retrieves enclave identity information by ID and version
+// GetEnclaveID retrieves enclave identity information by ID and version (uses default DAO)
 func (p *Client) GetEnclaveID(ctx context.Context, enclaveId uint8, version uint32) (*EnclaveIdentityInfo, error) {
-	result, err := p.enclaveId.GetEnclaveIdentity(&bind.CallOpts{Context: ctx}, big.NewInt(int64(enclaveId)), big.NewInt(int64(version)))
+	return p.GetEnclaveIDWithEvalNum(ctx, enclaveId, version, nil)
+}
+
+// GetEnclaveIDWithEvalNum retrieves enclave identity with a specific TCB eval number
+func (p *Client) GetEnclaveIDWithEvalNum(ctx context.Context, enclaveId uint8, version uint32, tcbEvalNum *uint32) (*EnclaveIdentityInfo, error) {
+	var dao *AutomataEnclaveIdentityDao.AutomataEnclaveIdentityDao
+	var err error
+
+	if tcbEvalNum != nil {
+		dao, err = p.GetEnclaveIdDaoForVersion(*tcbEvalNum)
+		if err != nil {
+			return nil, logex.Trace(err)
+		}
+	} else {
+		dao = p.defaultEnclaveId
+	}
+
+	result, err := dao.GetEnclaveIdentity(&bind.CallOpts{Context: ctx}, big.NewInt(int64(enclaveId)), big.NewInt(int64(version)))
 	if err != nil {
 		return nil, logex.Trace(err)
 	}
+
 	var info EnclaveIdentityInfo
 	if err := json.Unmarshal([]byte(result.IdentityStr), &info.Identity); err != nil {
 		return nil, logex.Trace(err)
@@ -136,3 +247,4 @@ func (p *Client) GetEnclaveID(ctx context.Context, enclaveId uint8, version uint
 	info.Signature = hex.EncodeToString(result.Signature)
 	return &info, nil
 }
+

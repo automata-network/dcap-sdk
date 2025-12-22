@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/automata-network/dcap-sdk/packages/godcap/mock"
+	"github.com/automata-network/dcap-sdk/packages/godcap/registry"
 	"github.com/automata-network/dcap-sdk/packages/godcap/stubs/VerifiedCounter"
 	"github.com/automata-network/dcap-sdk/packages/godcap/zkdcap"
 	"github.com/chzyer/logex"
@@ -27,7 +28,8 @@ func TestDcapPortalOnChain(t *testing.T) {
 		return
 	}
 
-	portal, err := NewDcapPortal(ctx, WithPrivateKey(privateKey), WithEndpoint(ChainAutomataTestnet.Endpoint))
+	network := registry.AutomataTestnet()
+	portal, err := NewDcapPortal(ctx, WithPrivateKey(privateKey), WithEndpoint(network.DefaultRpcUrl()))
 	test.Nil(err)
 
 	counter, err := VerifiedCounter.NewVerifiedCounterCaller(verifiedCounterAddr, portal.Client())
@@ -67,7 +69,8 @@ func TestSp1(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	portal, err := NewDcapPortal(ctx, WithEndpoint(ChainAutomataTestnet.Endpoint), WithZkProof(nil))
+	network := registry.AutomataTestnet()
+	portal, err := NewDcapPortal(ctx, WithEndpoint(network.DefaultRpcUrl()), WithZkProof(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +97,8 @@ func TestRisc0(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	portal, err := NewDcapPortal(ctx, WithEndpoint(ChainAutomataTestnet.Endpoint), WithZkProof(nil))
+	network := registry.AutomataTestnet()
+	portal, err := NewDcapPortal(ctx, WithEndpoint(network.DefaultRpcUrl()), WithZkProof(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,9 +128,10 @@ func TestDcapPortalWithFee(t *testing.T) {
 		return
 	}
 
-	chain := *ChainAutomataTestnet
-	chain.AutomataDcapAttestationFee = common.HexToAddress("0xA0c3a7C811e3B6b7D7a381b3aD29A7FCF9048DFf")
-	chain.DcapPortal = common.HexToAddress("0x1aFedD4123494f83ADc166A4Fd6Da96321c88c41")
+	// Copy the network and override addresses for testing
+	network := *registry.AutomataTestnet()
+	network.Contracts.Dcap.DcapAttestationFee = common.HexToAddress("0xA0c3a7C811e3B6b7D7a381b3aD29A7FCF9048DFf")
+	network.Contracts.Dcap.DcapPortal = common.HexToAddress("0x1aFedD4123494f83ADc166A4Fd6Da96321c88c41")
 
 	mockVerifiedCounterAddr := common.HexToAddress("0x5BE14673A6d40C711F082D6f7e4796E2fC57d7b2")
 	callback := NewCallbackFromAbiJSON(VerifiedCounter.VerifiedCounterABI).
@@ -134,7 +139,7 @@ func TestDcapPortalWithFee(t *testing.T) {
 		WithTo(mockVerifiedCounterAddr).
 		WithValue(big.NewInt(10))
 
-	portal, err := NewDcapPortal(ctx, WithChainConfig(&chain), WithPrivateKey(privateKey))
+	portal, err := NewDcapPortal(ctx, WithNetwork(&network), WithPrivateKey(privateKey))
 	test.Nil(err)
 
 	succ, err := portal.CheckQuote(ctx, mock.Quotes[0])
@@ -159,7 +164,7 @@ func TestDcapPortalZkProof(t *testing.T) {
 		Output: output,
 		Proof:  seal,
 	}
-	portal, err := NewDcapPortal(ctx, WithChainConfig(ChainAutomataTestnet))
+	portal, err := NewDcapPortal(ctx, WithNetwork(registry.AutomataTestnet()))
 	test.Nil(err)
 
 	succ, err := portal.CheckZkProof(ctx, zkproof)
