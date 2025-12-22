@@ -74,6 +74,10 @@ func (q *QuoteParser) Quote() []byte {
 	return q.quote
 }
 
+func (q *QuoteParser) Spec() QuoteSpec {
+	return q.spec
+}
+
 func (q *QuoteParser) CertDataOffset() int {
 	offset := q.spec.AuthDataSizeOffset()
 	authDataSize := led.Uint16(q.quote[offset:])
