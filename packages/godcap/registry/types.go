@@ -42,26 +42,6 @@ func (v *VersionedDao) IsV1_0() bool {
 	return false
 }
 
-// DefaultAddress returns the default/legacy address (for v1.0 compatibility)
-func (v *VersionedDao) DefaultAddress() (common.Address, error) {
-	if v.IsV1_0() {
-		return v.Versioned[0], nil
-	}
-	// For v1.1, return the highest version available
-	var maxKey uint32
-	var addr common.Address
-	for k, a := range v.Versioned {
-		if k > maxKey {
-			maxKey = k
-			addr = a
-		}
-	}
-	if maxKey == 0 && len(v.Versioned) == 0 {
-		return common.Address{}, fmt.Errorf("no addresses available")
-	}
-	return addr, nil
-}
-
 // AvailableVersions returns all available TCB evaluation numbers
 func (v *VersionedDao) AvailableVersions() []uint32 {
 	versions := make([]uint32, 0, len(v.Versioned))
@@ -215,8 +195,7 @@ func (n *Network) resolveVersionedDao(
 		}
 	}
 
-	// Fallback to default (highest version)
-	return dao.DefaultAddress()
+	return common.Address{}, fmt.Errorf("cannot resolve versioned DAO address: tcbEvalNum or tcbEvalDao required")
 }
 
 // GetEnclaveIdDaoAddress returns the EnclaveIdDao address for a specific TCB eval version
@@ -227,14 +206,4 @@ func (n *Network) GetEnclaveIdDaoAddress(tcbEvalNum uint32) (common.Address, err
 // GetFmspcTcbDaoAddress returns the FmspcTcbDao address for a specific TCB eval version
 func (n *Network) GetFmspcTcbDaoAddress(tcbEvalNum uint32) (common.Address, error) {
 	return n.Contracts.Pccs.FmspcTcbDao.GetAddress(tcbEvalNum)
-}
-
-// GetDefaultEnclaveIdDaoAddress returns the default EnclaveIdDao address
-func (n *Network) GetDefaultEnclaveIdDaoAddress() (common.Address, error) {
-	return n.Contracts.Pccs.EnclaveIdDao.DefaultAddress()
-}
-
-// GetDefaultFmspcTcbDaoAddress returns the default FmspcTcbDao address
-func (n *Network) GetDefaultFmspcTcbDaoAddress() (common.Address, error) {
-	return n.Contracts.Pccs.FmspcTcbDao.DefaultAddress()
 }

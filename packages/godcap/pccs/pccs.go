@@ -84,6 +84,24 @@ func (p *Client) GetStandardTcbEvalNum(ctx context.Context, tcbId uint8) (uint32
 	return p.tcbEvalDao.Standard(&bind.CallOpts{Context: ctx}, tcbId)
 }
 
+// GetCurrentFmspcTcbDaoAddress returns the FmspcTcbDao address for the current standard TCB eval version
+func (p *Client) GetCurrentFmspcTcbDaoAddress(ctx context.Context, tcbId uint8) ([20]byte, error) {
+	evalNum, err := p.GetStandardTcbEvalNum(ctx, tcbId)
+	if err != nil {
+		return [20]byte{}, logex.Trace(err)
+	}
+	return p.network.GetFmspcTcbDaoAddress(evalNum)
+}
+
+// GetCurrentEnclaveIdDaoAddress returns the EnclaveIdDao address for the current standard TCB eval version
+func (p *Client) GetCurrentEnclaveIdDaoAddress(ctx context.Context, tcbId uint8) ([20]byte, error) {
+	evalNum, err := p.GetStandardTcbEvalNum(ctx, tcbId)
+	if err != nil {
+		return [20]byte{}, logex.Trace(err)
+	}
+	return p.network.GetEnclaveIdDaoAddress(evalNum)
+}
+
 // GetFmspcTcbDaoForVersion returns the FmspcTcbDao for a specific TCB eval version
 func (p *Client) GetFmspcTcbDaoForVersion(tcbEvalNum uint32) (*AutomataFmspcTcbDao.AutomataFmspcTcbDao, error) {
 	// Check cache
