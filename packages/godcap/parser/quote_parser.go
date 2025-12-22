@@ -15,12 +15,36 @@ import (
 var led = binary.LittleEndian
 
 var ErrInvalidPemType = logex.Define("Invalid PEM type: %v")
+var ErrUnsupportedQuoteVersion = logex.Define("unsupported quote version: %v")
+var ErrUnknownTeeType = logex.Define("unknown TEE type: %v")
+var ErrUnknownBodyType = logex.Define("unknown body type: %v")
+var ErrQuoteTooShort = logex.Define("quote too short: need %v bytes, got %v")
 var OidFmpsc = asn1.ObjectIdentifier{1, 2, 840, 113741, 1, 13, 1, 4}
 
 const SGX_TEE_TYPE = uint32(0x00000000)
 const TDX_TEE_TYPE = uint32(0x00000081)
-const V4_QUOTE = uint16(0x04)
+
+// Quote versions
 const V3_QUOTE = uint16(0x03)
+const V4_QUOTE = uint16(0x04)
+const V5_QUOTE = uint16(0x05)
+
+// Body types (V5 explicit, V4 inferred from TEE type)
+const (
+	BODY_TYPE_SGX   = uint16(1) // EnclaveReportBody - 384 bytes
+	BODY_TYPE_TDX10 = uint16(2) // Td10ReportBody - 584 bytes
+	BODY_TYPE_TDX15 = uint16(3) // Td15ReportBody - 648 bytes (V5 only)
+)
+
+// Body sizes in bytes
+const (
+	ENCLAVE_REPORT_BODY_SIZE = 384
+	TD10_REPORT_BODY_SIZE    = 584
+	TD15_REPORT_BODY_SIZE    = 648
+)
+
+// Header size is constant across all versions
+const QUOTE_HEADER_SIZE = 48
 
 type QuoteParser struct {
 	spec  QuoteSpec
@@ -30,6 +54,16 @@ type QuoteParser struct {
 func NewQuoteParser(quote []byte) *QuoteParser {
 	spec := DetectQuoteSpec(quote)
 	return &QuoteParser{spec: spec, quote: quote}
+}
+
+// NewQuoteParserSafe is like NewQuoteParser but returns an error instead of panicking
+// on unsupported quote versions or invalid data
+func NewQuoteParserSafe(quote []byte) (*QuoteParser, error) {
+	spec, err := DetectQuoteSpecSafe(quote)
+	if err != nil {
+		return nil, logex.Trace(err)
+	}
+	return &QuoteParser{spec: spec, quote: quote}, nil
 }
 
 func (q *QuoteParser) CertData() []byte {
@@ -194,6 +228,48 @@ func (q *V4QuoteSpec) AuthDataSizeOffset() int {
 	}
 }
 
+// V5QuoteSpec handles Quote V5 format which has explicit body_type and body_size fields
+type V5QuoteSpec struct {
+	BodyType uint16
+	BodySize uint32
+}
+
+func (q *V5QuoteSpec) AuthDataSizeOffset() int {
+	// V5 layout: 48 (header) + 2 (body_type) + 4 (body_size) + body_size + 4 (sig_len) + 64 + 64 + 2 + 4 + 384 + 64
+	// = 54 + body_size + 586
+	return 54 + int(q.BodySize) + 4 + 64 + 64 + 2 + 4 + 384 + 64
+}
+
+func (q *V5QuoteSpec) TcbType() uint8 {
+	switch q.BodyType {
+	case BODY_TYPE_SGX:
+		return 0
+	case BODY_TYPE_TDX10, BODY_TYPE_TDX15:
+		return 1
+	default:
+		panic("unknown body type")
+	}
+}
+
+func (q *V5QuoteSpec) TcbVersion() uint32 {
+	return 3
+}
+
+func (q *V5QuoteSpec) Version() uint32 {
+	return 5
+}
+
+func (q *V5QuoteSpec) EnclaveIDType() uint8 {
+	switch q.BodyType {
+	case BODY_TYPE_SGX:
+		return pccs.ENCLAVE_ID_QE
+	case BODY_TYPE_TDX10, BODY_TYPE_TDX15:
+		return pccs.ENCLAVE_ID_TDQE
+	default:
+		panic("unknown body type")
+	}
+}
+
 type QuoteSpec interface {
 	AuthDataSizeOffset() int
 	TcbType() uint8
@@ -203,19 +279,56 @@ type QuoteSpec interface {
 }
 
 func DetectQuoteSpec(quote []byte) QuoteSpec {
-	off := 0
+	spec, err := DetectQuoteSpecSafe(quote)
+	if err != nil {
+		panic(err.Error())
+	}
+	return spec
+}
+
+// DetectQuoteSpecSafe detects the quote version and returns the appropriate QuoteSpec
+// Returns an error for unsupported versions or malformed quotes
+func DetectQuoteSpecSafe(quote []byte) (QuoteSpec, error) {
+	// Minimum quote size: header (48) + minimal body
+	if len(quote) < QUOTE_HEADER_SIZE+8 {
+		return nil, ErrQuoteTooShort.Format(QUOTE_HEADER_SIZE+8, len(quote))
+	}
+
 	ed := binary.LittleEndian
-	version := ed.Uint16(quote)
-	off += 4
-	teeType := ed.Uint32(quote[off:])
-	if version == 3 {
-		return &V3QuoteSpec{}
-	} else if version == 4 {
+	version := ed.Uint16(quote[0:2])
+	teeType := ed.Uint32(quote[4:8])
+
+	switch version {
+	case V3_QUOTE:
+		return &V3QuoteSpec{}, nil
+	case V4_QUOTE:
+		// Validate TEE type for V4
+		if teeType != SGX_TEE_TYPE && teeType != TDX_TEE_TYPE {
+			return nil, ErrUnknownTeeType.Format(teeType)
+		}
 		return &V4QuoteSpec{
 			TeeType: teeType,
+		}, nil
+	case V5_QUOTE:
+		// V5 needs additional bytes for body_type and body_size
+		if len(quote) < QUOTE_HEADER_SIZE+6 {
+			return nil, ErrQuoteTooShort.Format(QUOTE_HEADER_SIZE+6, len(quote))
 		}
-	} else {
-		panic("unexpected quote version")
+		// V5 has explicit body_type (2 bytes) and body_size (4 bytes) after the 48-byte header
+		bodyType := ed.Uint16(quote[QUOTE_HEADER_SIZE : QUOTE_HEADER_SIZE+2])
+		bodySize := ed.Uint32(quote[QUOTE_HEADER_SIZE+2 : QUOTE_HEADER_SIZE+6])
+
+		// Validate body type
+		if bodyType != BODY_TYPE_SGX && bodyType != BODY_TYPE_TDX10 && bodyType != BODY_TYPE_TDX15 {
+			return nil, ErrUnknownBodyType.Format(bodyType)
+		}
+
+		return &V5QuoteSpec{
+			BodyType: bodyType,
+			BodySize: bodySize,
+		}, nil
+	default:
+		return nil, ErrUnsupportedQuoteVersion.Format(version)
 	}
 }
 
