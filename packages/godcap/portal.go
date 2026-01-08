@@ -243,7 +243,7 @@ func (p *DcapPortal) WaitTx(ctx context.Context, tx *types.Transaction) <-chan *
 					continue
 				}
 
-				logex.Infof("tx receipt %v comfirmed on %v", tx.Hash(), receipt.BlockNumber)
+				logex.Infof("tx receipt %v confirmed on %v", tx.Hash(), receipt.BlockNumber)
 				if p.chain.Explorer != "" {
 					logex.Infof("explorer: %v/tx/%v", p.chain.Explorer, tx.Hash())
 				}
