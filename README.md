@@ -6,6 +6,10 @@
   </picture>
 </div>
 
+> [!IMPORTANT]
+> This repo is now a public archive. All future development of this codebase has been migrated to the [Automata DCAP Attestation](https://github.com/automata-network/automata-dcap-attestation/tree/main/go-sdk/packages/godcap) monorepo.
+> Feel free to fork any reference implementations that it still contains.
+
 # DCAP SDK
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
